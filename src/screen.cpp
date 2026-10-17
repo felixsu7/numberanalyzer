@@ -3,13 +3,28 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <ostream>
 #include <string>
 #include <utility>
 
-static const Cell default_cell =
-    Cell{' ', {0, 0, 0, true}, {0, 0, 0, true}, ATTR_NONE};
+// ANSI Sequences Reference:
+// https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
+
+// kung mabait ka compiler syempre iooptimize mo yan properly and not one by one
+// <3
+inline static const std::string HIDE_CURSOR = "\033[?25l";
+inline static const std::string SHOW_CURSOR = "\033[?25h";
+inline static const std::string RESTORE_SCREEN = "\033[?47l";
+inline static const std::string SAVE_SCREEN = "\033[?47h";
+inline static const std::string ENABLE_ALT_BUFFER = "\033[?1049h";
+inline static const std::string DISABLE_ALT_BUFFER = "\033[?1049l";
+inline static const std::string CLEAR_SCREEN = "\033[2J";
+inline static const std::string HOME_CURSOR = "\033[H";
+inline static const std::string RESET_STYLE = "\033[0m";
+inline static const std::string TERM_SYNC_BEGIN = "\033[?2026h";
+inline static const std::string TERM_SYNC_END = "\033[?2026l";
 
 static const int SCREEN_FPS = 30;
 
@@ -26,6 +41,10 @@ void Screen::activate() {
     // report error
     return;
   }
+
+  std::cout << ENABLE_ALT_BUFFER << HIDE_CURSOR << CLEAR_SCREEN << HOME_CURSOR
+            << std::flush;
+
   activated = true;
 }
 
@@ -35,6 +54,9 @@ void Screen::deactivate() {
     // report error
     return;
   }
+
+  std::cout << RESET_STYLE << SHOW_CURSOR << DISABLE_ALT_BUFFER << std::flush;
+
   activated = false;
 }
 
@@ -66,9 +88,17 @@ void Screen::put(int x, int y, Cell c) {
   back_framebuffer[static_cast<size_t>((y * _w) + x)] = c;
 }
 
-void term_sync_begin() {}
+std::string move_cursor_seq(int x, int y) {
+  return "\033[" + std::to_string(y + 1) + ";" + std::to_string(x + 1) + "H";
+}
 
-void term_sync_end() {}
+std::string toggle_cursor_seq(bool state) {
+  if (state) {
+    return SHOW_CURSOR;
+  } else {
+    return HIDE_CURSOR;
+  }
+}
 
 void Screen::present() {
   // limit according to FPS here
@@ -81,18 +111,24 @@ void Screen::present() {
   }
 
   std::string payload;
-  term_sync_begin();
-  //
+  payload += TERM_SYNC_BEGIN + HOME_CURSOR + RESET_STYLE;
   // push (back - front) diffs to term
   for (int y = 0; y < _h; y++) {
     for (int x = 0; x < _w; x++) {
-      // each cell diff
+      Cell f = front_framebuffer[(y * _w) + x];
+      Cell b = back_framebuffer[(y * _w) + x];
+
+      // safe, all set to zero and no paddings on Cell.
+      if (memcmp(&f, &b, sizeof(Cell)) != 0) {
+        payload += move_cursor_seq(x, y);
+        payload += b.glyph;
+      }
     }
   }
 
-  std::cout << payload;
-  std::flush(std::cout);
-  term_sync_end();
+  payload += TERM_SYNC_END;
+
+  std::cout << payload << std::flush;
   last_draw = now;
 
   std::swap(front_framebuffer, back_framebuffer);

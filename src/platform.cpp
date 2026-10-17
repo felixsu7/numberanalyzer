@@ -1,4 +1,5 @@
 #include "platform.hpp"
+
 // TODO
 #ifdef PLAT_WINDOWS
 
@@ -30,7 +31,8 @@ PLATFORM_ERROR platform_beep(uint64_t duration) {
 
 static termios orig_termstate;
 
-// https://linux.die.net/man/3/tcgetattr
+// Reference: https://linux.die.net/man/3/tcgetattr
+
 PLATFORM_ERROR platform_term_activate() {
   int tty = open("/dev/tty", O_RDWR | O_CLOEXEC);
   if (tty == -1) {

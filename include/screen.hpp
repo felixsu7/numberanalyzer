@@ -30,6 +30,9 @@ struct Cell {
   CellAttr attrs;
 };
 
+const Cell default_cell =
+    Cell{' ', {0, 0, 0, true}, {0, 0, 0, true}, ATTR_NONE};
+
 class Screen {
 public:
   Screen(int w, int h);
@@ -43,6 +46,9 @@ public:
   // dimensions
   int width();
   int height();
+
+  void move_cursor(int x, int y);
+  void toggle_cursor(bool state);
 
   void draw_hline(int x, int y, int w, Cell c);
   void draw_vline(int x, int y, int h, Cell c);
