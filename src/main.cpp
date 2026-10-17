@@ -1,3 +1,4 @@
+#include "platform.hpp"
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
