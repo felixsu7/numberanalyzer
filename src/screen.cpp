@@ -1,4 +1,5 @@
 #include "screen.hpp"
+#include "platform.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
@@ -10,34 +11,39 @@
 static const Cell default_cell =
     Cell{' ', {0, 0, 0, true}, {0, 0, 0, true}, ATTR_NONE};
 
+static const int SCREEN_FPS = 30;
+
 Screen::Screen(int w, int h) {
   _w = w;
   _h = h;
   resize(w, h);
+  last_draw = 0;
 }
 
 void Screen::activate() {
-  PLATFORM_ERROR err = platform_term_activate(&platform_state);
+  PLATFORM_ERROR err = platform_term_activate();
   if (err != PLATFORM_ERROR::NONE) {
     // report error
     return;
   }
+  activated = true;
 }
 
 void Screen::deactivate() {
-  PLATFORM_ERROR err = platform_term_deactivate(&platform_state);
+  PLATFORM_ERROR err = platform_term_deactivate();
   if (err != PLATFORM_ERROR::NONE) {
     // report error
     return;
   }
+  activated = false;
 }
 
 void Screen::resize(int w, int h) {
-  front_framebuffer.resize(w * h);
+  front_framebuffer.resize(static_cast<size_t>(w * h));
   // do we need to reserve?
-  front_framebuffer.reserve(w * h);
-  back_framebuffer.resize(w * h);
-  back_framebuffer.reserve(w * h);
+  front_framebuffer.reserve(static_cast<size_t>(w * h));
+  back_framebuffer.resize(static_cast<size_t>(w * h));
+  back_framebuffer.reserve(static_cast<size_t>(w * h));
   clear();
 }
 
@@ -57,7 +63,7 @@ void Screen::put(int x, int y, Cell c) {
   if ((x < 0) || (x >= _w) || (y < 0) || (y >= _h)) {
     return;
   }
-  back_framebuffer[(y * _w) + x] = c;
+  back_framebuffer[static_cast<size_t>((y * _w) + x)] = c;
 }
 
 void term_sync_begin() {}
@@ -66,6 +72,13 @@ void term_sync_end() {}
 
 void Screen::present() {
   // limit according to FPS here
+  const uint64_t now = platform_monotime();
+  if ((last_draw + static_cast<uint64_t>(1.0 / SCREEN_FPS) * 1000) > now) {
+    std::transform(back_framebuffer.begin(), back_framebuffer.end(),
+                   back_framebuffer.begin(),
+                   [](Cell _) { return default_cell; });
+    return;
+  }
 
   std::string payload;
   term_sync_begin();
@@ -80,6 +93,7 @@ void Screen::present() {
   std::cout << payload;
   std::flush(std::cout);
   term_sync_end();
+  last_draw = now;
 
   std::swap(front_framebuffer, back_framebuffer);
   std::transform(back_framebuffer.begin(), back_framebuffer.end(),
@@ -126,11 +140,11 @@ void Screen::draw_rect(int x, int y, int w, int h, Cell c) {
 };
 void Screen::draw_text(int x, int y, const std::string text, Cell style) {
   // guessing this is unoptimal
-  int text_length = text.length();
+  int text_length = static_cast<int>(text.length());
   for (int xp = 0; xp < text_length; xp++) {
     Cell c = style;
-    c.glyph = text.at(xp);
-    put(xp, y, c);
+    c.glyph = text.at(static_cast<int>(xp));
+    put(x + xp, y, c);
   }
 };
 

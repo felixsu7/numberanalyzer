@@ -1,6 +1,5 @@
 #ifndef SCREEN_H
 #define SCREEN_H
-#include "platform.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -52,10 +51,11 @@ public:
   void draw_text(int x, int y, std::string text, Cell style);
 
 private:
+  bool activated;
   int _w, _h;
   std::vector<Cell> front_framebuffer;
   std::vector<Cell> back_framebuffer;
-  PLATFORM_STATE platform_state;
+  uint64_t last_draw;
 };
 
 #endif // !SCREEN_H
