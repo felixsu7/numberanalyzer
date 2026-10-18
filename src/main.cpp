@@ -1,19 +1,36 @@
 #include "screen.hpp"
 #include <cerrno>
 #include <cstdlib>
+#include <random>
 #include <stdio.h>
 #include <thread>
 
 using namespace std;
 
 int main() {
-  Screen screen(10, 10);
-  screen.activate();
+  Screen screen(50, 50);
   Cell c = default_cell;
-  c.glyph = 'A';
-  screen.draw_line(0, 0, 5, 3, c);
-  screen.present();
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  c.glyph = '*';
+  int running = 0;
+  int px = 0;
+  int py = 0;
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<int64_t> dist(-10000, 10000);
+  std::uniform_int_distribution<int64_t> distd(-3, 3);
+  screen.activate();
+  while (running < 60) {
+    int d = distd(gen);
+    if (dist(gen) % 2 == 0) {
+      px += d;
+    } else {
+      py += d;
+    }
+    screen.put(px, py, c);
+    screen.present();
+    running++;
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
   screen.deactivate();
   // bool running = true;
   // string input;

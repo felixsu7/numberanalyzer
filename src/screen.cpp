@@ -9,6 +9,8 @@
 #include <string>
 #include <utility>
 
+// TODO: support unicode outout
+
 // ANSI Sequences Reference:
 // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
 
@@ -100,6 +102,8 @@ std::string toggle_cursor_seq(bool state) {
   }
 }
 
+std::string cell_seq(Cell c) {}
+
 void Screen::present() {
   // limit according to FPS here
   const uint64_t now = platform_monotime();
@@ -121,7 +125,7 @@ void Screen::present() {
       // safe, all set to zero and no paddings on Cell.
       if (memcmp(&f, &b, sizeof(Cell)) != 0) {
         payload += move_cursor_seq(x, y);
-        payload += b.glyph;
+        payload += static_cast<char32_t>(b.glyph);
       }
     }
   }
