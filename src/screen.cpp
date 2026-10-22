@@ -8,6 +8,7 @@
 #include <ostream>
 #include <string>
 #include <utility>
+#include <vector>
 
 // TODO: support unicode outout
 
@@ -102,7 +103,31 @@ std::string toggle_cursor_seq(bool state) {
   }
 }
 
-std::string cell_seq(Cell c) {}
+std::string cell_seq(Cell c) {
+  // TODO: anything else than true color
+  // TODO: state tracking
+  std::string seq;
+  if (!c.foreground.default_color) {
+    seq += "\033[38;2;";
+    seq += std::to_string(c.foreground.red) + ';';
+    seq += std::to_string(c.foreground.green) + ';';
+    seq += std::to_string(c.foreground.blue) + 'm';
+  }
+
+  if (!c.background.default_color) {
+    seq += "\033[48;2;";
+    seq += std::to_string(c.background.red) + ';';
+    seq += std::to_string(c.background.green) + ';';
+    seq += std::to_string(c.background.blue) + 'm';
+  }
+
+  if (c.foreground.default_color && c.background.default_color) {
+    seq += "\033[0m";
+  }
+
+  seq += static_cast<char32_t>(c.glyph);
+  return seq;
+}
 
 void Screen::present() {
   // limit according to FPS here
@@ -125,7 +150,7 @@ void Screen::present() {
       // safe, all set to zero and no paddings on Cell.
       if (memcmp(&f, &b, sizeof(Cell)) != 0) {
         payload += move_cursor_seq(x, y);
-        payload += static_cast<char32_t>(b.glyph);
+        payload += cell_seq(b);
       }
     }
   }

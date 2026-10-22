@@ -11,22 +11,36 @@ int main() {
   Screen screen(50, 50);
   Cell c = default_cell;
   c.glyph = '*';
+  c.foreground = {255, 0, 0, false};
+  c.background = {255, 0, 0, false};
   int running = 0;
   int px = 0;
   int py = 0;
   std::random_device rd;
   std::mt19937_64 gen(rd());
   std::uniform_int_distribution<int64_t> dist(-10000, 10000);
-  std::uniform_int_distribution<int64_t> distd(-3, 3);
+  std::uniform_int_distribution<int64_t> distd(-5, 5);
   screen.activate();
   while (running < 60) {
+    c.foreground.red += distd(gen) * 10;
+    c.foreground.green += distd(gen) * 10;
+    c.foreground.blue += distd(gen) * 10;
+    c.background.red += distd(gen) * 10;
+    c.background.green += distd(gen) * 10;
+    c.background.blue += distd(gen) * 10;
+    screen.draw_rect(10 + distd(gen), 10 + distd(gen), 5 + distd(gen),
+                     6 + distd(gen), c);
+    screen.draw_text(10 + distd(gen), 10 + distd(gen), "Hello!!", c);
     int d = distd(gen);
     if (dist(gen) % 2 == 0) {
       px += d;
     } else {
       py += d;
     }
-    screen.put(px, py, c);
+    if (px < 0)
+      px = 0;
+    if (py < 0)
+      py = 0;
     screen.present();
     running++;
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
