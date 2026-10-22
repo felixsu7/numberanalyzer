@@ -13,6 +13,7 @@
 #define _WIN32_WINNT 0x0A00
 #endif
 #include <windows.h>
+#include <cstdint>
 #elif defined(__unix__)
 #define PLAT_UNIX
 #include <termios.h>
@@ -21,9 +22,9 @@
 #error "Unknown platform"
 #endif
 
-enum class PLATFORM_ERROR { NONE, UNIX_INIT, UNIX_TEARDOWN };
+enum class PLATFORM_ERROR { NONE, UNIX_INIT, UNIX_TEARDOWN, WINDOWS_INIT, WINDOWS_TEARDOWN };
 
-enum class PLATFORM_EVENT_TYPE { KEY, MOUSE, RESIZE, QUIT, ERROR };
+enum class PLATFORM_EVENT_TYPE { KEY, MOUSE, RESIZE, QUIT, EERROR };
 
 enum class PLATFORM_EVENT_MOUSE_KEY {
   NONE,
@@ -45,7 +46,7 @@ struct PlatformEvent {
 
   uint32_t glyph;
 
-  uint8_t mouse_key;
+  PLATFORM_EVENT_MOUSE_KEY mouse_key;
   // points to a character, not exact pixel values
   // only valid when mouse_key is move
   uint16_t mouse_x;
