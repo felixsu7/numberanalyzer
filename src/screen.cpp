@@ -103,22 +103,51 @@ std::string toggle_cursor_seq(bool state) {
   }
 }
 
-std::string cell_seq(Cell c) {
-  // TODO: anything else than true color
+std::string cell_seq(Cell c, Cell &old) {
   // TODO: state tracking
   std::string seq;
-  if (!c.foreground.default_color) {
+  if (memcmp(&c, &old, sizeof(Cell)) != 0) {
     seq += "\033[38;2;";
     seq += std::to_string(c.foreground.red) + ';';
     seq += std::to_string(c.foreground.green) + ';';
     seq += std::to_string(c.foreground.blue) + 'm';
   }
 
-  if (!c.background.default_color) {
+  if (memcmp(&c, &old, sizeof(Cell)) != 0) {
     seq += "\033[48;2;";
     seq += std::to_string(c.background.red) + ';';
     seq += std::to_string(c.background.green) + ';';
     seq += std::to_string(c.background.blue) + 'm';
+  }
+
+  if (c.attrs != ATTR_NONE) {
+    seq += "\033[";
+    if (c.attrs & ATTR_BOLD) {
+      seq += "1;";
+    }
+    if (c.attrs & ATTR_DIM) {
+      seq += "2;";
+    }
+    if (c.attrs & ATTR_ITALIC) {
+      seq += "3;";
+    }
+    if (c.attrs & ATTR_UNDERLINE) {
+      seq += "4;";
+    }
+    if (c.attrs & ATTR_BLINK) {
+      seq += "5;";
+    }
+    if (c.attrs & ATTR_REVERSE) {
+      seq += "7;";
+    }
+    if (c.attrs & ATTR_HIDDEN) {
+      seq += "8;";
+    }
+    if (c.attrs & ATTR_STRIKE) {
+      seq += "9m;";
+    }
+    seq.pop_back();
+    seq += 'm';
   }
 
   if (c.foreground.default_color && c.background.default_color) {
@@ -142,7 +171,10 @@ void Screen::present() {
   std::string payload;
   payload += TERM_SYNC_BEGIN + HOME_CURSOR + RESET_STYLE;
   // push (back - front) diffs to term
+
+  
   for (int y = 0; y < _h; y++) {
+    Cell old_cell = default_cell;
     for (int x = 0; x < _w; x++) {
       Cell f = front_framebuffer[(y * _w) + x];
       Cell b = back_framebuffer[(y * _w) + x];
@@ -150,7 +182,8 @@ void Screen::present() {
       // safe, all set to zero and no paddings on Cell.
       if (memcmp(&f, &b, sizeof(Cell)) != 0) {
         payload += move_cursor_seq(x, y);
-        payload += cell_seq(b);
+        payload += cell_seq(b, b);
+        old_cell = b;
       }
     }
   }

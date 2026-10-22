@@ -9,7 +9,7 @@ DWORD original_output_mode = 0;
 
 PLATFORM_ERROR platform_term_activate() {
   console_input = GetStdHandle(STD_INPUT_HANDLE);
-  console_output = GetStdHandle(STD_OUTPUT_HANDLE);
+ 
   if (console_input == nullptr || console_input == INVALID_HANDLE_VALUE || console_output == nullptr ||
       console_output == INVALID_HANDLE_VALUE ||
       !GetConsoleMode(console_input, &original_input_mode) ||
@@ -24,6 +24,8 @@ PLATFORM_ERROR platform_term_activate() {
   input_mode |= ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS;
   if (!SetConsoleMode(console_input, input_mode))
     return PLATFORM_ERROR::WINDOWS_INIT;
+
+    console_output = GetStdHandle(STD_OUTPUT_HANDLE);
 
   if (!SetConsoleMode(console_output,
                       original_output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {

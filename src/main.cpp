@@ -11,6 +11,7 @@ int main() {
   Screen screen(50, 50);
   Cell c = default_cell;
   c.glyph = '*';
+  c.attrs = static_cast<CellAttr>(ATTR_BOLD | ATTR_UNDERLINE | ATTR_ITALIC);
   c.foreground = {255, 0, 0, false};
   c.background = {255, 0, 0, false};
   int running = 0;
