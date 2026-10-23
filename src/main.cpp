@@ -1,13 +1,13 @@
+#include "math_funcs.hpp"
 #include "screen.hpp"
 #include <cerrno>
 #include <cstdlib>
+#include <iostream>
 #include <random>
 #include <stdio.h>
 #include <thread>
 
-using namespace std;
-
-int main() {
+int tui_mode() {
   Screen screen(50, 50);
   Cell c = default_cell;
   c.glyph = '*';
@@ -47,52 +47,42 @@ int main() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
   screen.deactivate();
-  // bool running = true;
-  // string input;
-  //
-  // while (running) {
-  //   cout << "> ";
-  //   cin >> input;
-  //   if (input == "quit") {
-  //     running = false;
-  //     break;
-  //   }
-  //   char *end;
-  //   errno = 0;
-  //   int64_t numeric_input = strtoll(input.c_str(), &end, 10);
-  //   if (errno == ERANGE) {
-  //     cout << "Number is out of range." << endl;
-  //     continue;
-  //   }
-  //   if (end == input.c_str()) {
-  //     cout << "Number cannot be parsed." << endl;
-  //     continue;
-  //   }
-  //
-  //   if (numeric_input > 0) {
-  //     cout << "Number is positive." << endl;
-  //   } else if (numeric_input < 0) {
-  //     cout << "Number is negative." << endl;
-  //   } else {
-  //     cout << "Number is zero." << endl;
-  //   }
-  //
-  //   if (numeric_input % 2 == 0) {
-  //     cout << "Number is even." << endl;
-  //   } else {
-  //     cout << "Number is odd." << endl;
-  //   }
-  //
-  //   cout << "Factors of " << numeric_input << ": ";
-  //   for (int y = -numeric_input; y <= numeric_input; y++) {
-  //     for (int x = -numeric_input; x <= numeric_input; x++) {
-  //       if (x * y == numeric_input) {
-  //         cout << x << " * " << y << ", ";
-  //       }
-  //     }
-  //   }
-  //
-  //   cout << endl << endl;
-  // }
+}
+
+int main() {
+  bool running = true;
+  std::string input;
+
+  while (running) {
+    std::cout << "> ";
+    std::cin >> input;
+    if (input == "quit") {
+      running = false;
+      break;
+    }
+    char *end;
+    errno = 0;
+    int64_t numeric_input = strtoll(input.c_str(), &end, 10);
+    if (errno == ERANGE) {
+      std::cout << "Number is out of range." << std::endl;
+      continue;
+    }
+    if (end == input.c_str()) {
+      std::cout << "Number cannot be parsed." << std::endl;
+      continue;
+    }
+
+    // TODO: num2
+    const NumberAnalysis analysis = analyze_number(numeric_input, 1);
+
+    for (auto [f, v] : analysis.logs) {
+      std::cout << f << ":" << std::endl;
+      for (auto l : v) {
+        std::cout << "    " << l << std::endl;
+      }
+    }
+
+    std::cout << std::endl << std::endl;
+  }
   return 0;
 }
