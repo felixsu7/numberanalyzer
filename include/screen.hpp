@@ -1,5 +1,6 @@
 #ifndef SCREEN_H
 #define SCREEN_H
+#include "platform.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -8,7 +9,7 @@ struct Color {
   uint8_t red;
   uint8_t green;
   uint8_t blue;
-  bool default_color; // if true, ignore colors and use default term colors
+  bool active; // if false, ignore colors and use default term colors
 };
 
 enum CellAttr : uint32_t {
@@ -24,20 +25,20 @@ enum CellAttr : uint32_t {
 };
 
 struct Cell {
-  uint32_t glyph;
-  Color foreground;
-  Color background;
+  char32_t glyph;
+  Color fg;
+  Color bg;
   CellAttr attrs;
 };
 
 const Cell default_cell =
-    Cell{' ', {0, 0, 0, true}, {0, 0, 0, true}, ATTR_NONE};
+    Cell{' ', {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
 
 class Screen {
 public:
   Screen(int w, int h);
-  void activate();
-  void deactivate();
+  PLATFORM_ERROR activate();
+  PLATFORM_ERROR deactivate();
   void put(int x, int y, Cell c);
   void resize(int w, int h);
   void present();

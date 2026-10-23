@@ -38,29 +38,33 @@ Screen::Screen(int w, int h) {
   last_draw = 0;
 }
 
-void Screen::activate() {
+PLATFORM_ERROR Screen::activate() {
   PLATFORM_ERROR err = platform_term_activate();
   if (err != PLATFORM_ERROR::NONE) {
     // report error
-    return;
+    return err;
   }
 
   std::cout << ENABLE_ALT_BUFFER << HIDE_CURSOR << CLEAR_SCREEN << HOME_CURSOR
             << std::flush;
 
   activated = true;
+
+  return PLATFORM_ERROR::NONE;
 }
 
-void Screen::deactivate() {
+PLATFORM_ERROR Screen::deactivate() {
   PLATFORM_ERROR err = platform_term_deactivate();
   if (err != PLATFORM_ERROR::NONE) {
     // report error
-    return;
+    return err;
   }
 
   std::cout << RESET_STYLE << SHOW_CURSOR << DISABLE_ALT_BUFFER << std::flush;
 
   activated = false;
+
+  return PLATFORM_ERROR::NONE;
 }
 
 void Screen::resize(int w, int h) {
@@ -103,58 +107,60 @@ std::string toggle_cursor_seq(bool state) {
   }
 }
 
-std::string cell_seq(Cell c, Cell &old) {
-  // TODO: state tracking
+std::string style_delta_seq(CellAttr attrs, CellAttr old, CellAttr style,
+                            std::string set_seq, std::string reset_seq) {
+  if ((attrs & style) == (old & style))
+    return "";
+
+  if (attrs & style) {
+    return set_seq;
+  } else {
+    return reset_seq;
+  }
+}
+
+std::string cell_seq(Cell c, Cell old) {
   std::string seq;
-  if (memcmp(&c, &old, sizeof(Cell)) != 0) {
+  bool reset = false;
+
+  if ((!c.fg.active && old.fg.active) || (!c.bg.active && old.bg.active)) {
+    seq += "\033[0m";
+    reset = true;
+  }
+
+  if (c.fg.active && (reset || (memcmp(&c.fg, &old.fg, sizeof(c.fg)) != 0))) {
     seq += "\033[38;2;";
-    seq += std::to_string(c.foreground.red) + ';';
-    seq += std::to_string(c.foreground.green) + ';';
-    seq += std::to_string(c.foreground.blue) + 'm';
+    seq += std::to_string(c.fg.red) + ';';
+    seq += std::to_string(c.fg.green) + ';';
+    seq += std::to_string(c.fg.blue) + 'm';
   }
 
-  if (memcmp(&c, &old, sizeof(Cell)) != 0) {
+  if (c.bg.active && (reset || (memcmp(&c.bg, &old.bg, sizeof(c.bg)) != 0))) {
     seq += "\033[48;2;";
-    seq += std::to_string(c.background.red) + ';';
-    seq += std::to_string(c.background.green) + ';';
-    seq += std::to_string(c.background.blue) + 'm';
+    seq += std::to_string(c.bg.red) + ';';
+    seq += std::to_string(c.bg.green) + ';';
+    seq += std::to_string(c.bg.blue) + 'm';
   }
 
-  if (c.attrs != ATTR_NONE) {
+  if ((c.attrs != old.attrs) || (reset && c.attrs != ATTR_NONE)) {
     seq += "\033[";
-    if (c.attrs & ATTR_BOLD) {
-      seq += "1;";
-    }
-    if (c.attrs & ATTR_DIM) {
-      seq += "2;";
-    }
-    if (c.attrs & ATTR_ITALIC) {
-      seq += "3;";
-    }
-    if (c.attrs & ATTR_UNDERLINE) {
-      seq += "4;";
-    }
-    if (c.attrs & ATTR_BLINK) {
-      seq += "5;";
-    }
-    if (c.attrs & ATTR_REVERSE) {
-      seq += "7;";
-    }
-    if (c.attrs & ATTR_HIDDEN) {
-      seq += "8;";
-    }
-    if (c.attrs & ATTR_STRIKE) {
-      seq += "9m;";
-    }
+    CellAttr old_attrs = old.attrs;
+    if (reset)
+      old_attrs = ATTR_NONE;
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_BOLD, "1;", "22;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_DIM, "2;", "22;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_ITALIC, "3;", "23;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_UNDERLINE, "4;", "24;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_BLINK, "5;", "25;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_REVERSE, "7;", "27;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_HIDDEN, "8;", "28;");
+    seq += style_delta_seq(c.attrs, old_attrs, ATTR_STRIKE, "9;", "29;");
+    // replace last semicolon with m
     seq.pop_back();
     seq += 'm';
   }
 
-  if (c.foreground.default_color && c.background.default_color) {
-    seq += "\033[0m";
-  }
-
-  seq += static_cast<char32_t>(c.glyph);
+  seq.push_back(c.glyph);
   return seq;
 }
 
@@ -169,21 +175,24 @@ void Screen::present() {
   }
 
   std::string payload;
+  // std::cout << std::endl << "============ NEW FRAME ==========" << std::endl;
   payload += TERM_SYNC_BEGIN + HOME_CURSOR + RESET_STYLE;
   // push (back - front) diffs to term
 
-  
+  Cell old_cell = default_cell;
+  int last_change_pos = 0;
   for (int y = 0; y < _h; y++) {
-    Cell old_cell = default_cell;
     for (int x = 0; x < _w; x++) {
       Cell f = front_framebuffer[(y * _w) + x];
       Cell b = back_framebuffer[(y * _w) + x];
 
       // safe, all set to zero and no paddings on Cell.
       if (memcmp(&f, &b, sizeof(Cell)) != 0) {
-        payload += move_cursor_seq(x, y);
-        payload += cell_seq(b, b);
+        if (last_change_pos != (y * _w + x - 1))
+          payload += move_cursor_seq(x, y);
+        payload += cell_seq(b, old_cell);
         old_cell = b;
+        last_change_pos = y * _w + x;
       }
     }
   }
