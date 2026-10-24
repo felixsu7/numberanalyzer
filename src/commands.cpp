@@ -2,6 +2,7 @@
 #include "analysis.hpp"
 #include "evaluator.hpp"
 #include <iostream>
+#include <variant>
 
 CommandResult cmd_info(const std::string _, ProgramState *state) {
   std::cout << "Here are available analysis functions, commands, functions and "
@@ -52,9 +53,13 @@ std::string lower_case_string(const std::string s) {
   return res;
 }
 
+// Returns the index into items of the closest match to the key.
+// Returns -1 if not found, or -2 if found two or more matches.
 int smart_find_index(const std::vector<std::string> items,
                      const std::string key) {
   auto lowered_key = lower_case_string(key);
+  while (lowered_key[0] == ' ')
+    lowered_key.erase(0, 1);
   auto lowered_items = items;
   std::transform(lowered_items.begin(), lowered_items.end(),
                  lowered_items.begin(),
@@ -81,7 +86,7 @@ int smart_find_index(const std::vector<std::string> items,
           match_idx = static_cast<int>(i);
         } else {
           match = false;
-          match_idx = -1;
+          match_idx = -2;
           break;
         }
       }
@@ -91,21 +96,37 @@ int smart_find_index(const std::vector<std::string> items,
   return match_idx;
 }
 
+std::string input_helper(const std::vector<std::string> items,
+                         const std::string key, const std::string what) {
+  auto idx = smart_find_index(items, key);
+  if (idx < 0) {
+    return "";
+  }
+
+  if (idx == -1) {
+    std::cout << "ERROR: Input does not match any known " << what << "."
+              << std::endl;
+    return "";
+  }
+  if (idx == -2) {
+    std::cout << "ERROR: Input matches two or more known " << what
+              << ", please narrow the input down." << std::endl;
+    return "";
+  }
+
+  return items[static_cast<size_t>(idx)];
+  ;
+}
+
 CommandResult cmd_quit(const std::string _, ProgramState *state) {
   state->running = false;
   return CommandResult::QUIT;
 }
 
 CommandResult cmd_enable(const std::string input, ProgramState *state) {
-  auto idx = smart_find_index(analysis_funcs_order, input);
-  if (idx == -1) {
-    std::cout << "ERROR: Input must exactly match one analysis function!"
-              << std::endl;
+  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (name.empty())
     return CommandResult::FAILURE;
-  }
-
-  auto name = analysis_funcs_order[static_cast<size_t>(idx)];
-
   state->enabled[name] = true;
 
   std::cout << "Enabled analysis function: " << name << std::endl;
@@ -114,15 +135,9 @@ CommandResult cmd_enable(const std::string input, ProgramState *state) {
 }
 
 CommandResult cmd_disable(const std::string input, ProgramState *state) {
-  auto idx = smart_find_index(analysis_funcs_order, input);
-  if (idx == -1) {
-
-    std::cout << "ERROR: Input must exactly match one analysis function!"
-              << std::endl;
+  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (name.empty())
     return CommandResult::FAILURE;
-  }
-
-  auto name = analysis_funcs_order[static_cast<size_t>(idx)];
 
   state->enabled[name] = false;
 
@@ -132,14 +147,9 @@ CommandResult cmd_disable(const std::string input, ProgramState *state) {
 }
 
 CommandResult cmd_toggle(const std::string input, ProgramState *state) {
-  auto idx = smart_find_index(analysis_funcs_order, input);
-  if (idx == -1) {
-    std::cout << "ERROR: Input must exactly match one analysis function!"
-              << std::endl;
+  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (name.empty())
     return CommandResult::FAILURE;
-  }
-
-  auto name = analysis_funcs_order[static_cast<size_t>(idx)];
 
   state->enabled[name] = !state->enabled[name];
 
@@ -150,14 +160,9 @@ CommandResult cmd_toggle(const std::string input, ProgramState *state) {
 }
 
 CommandResult cmd_only(const std::string input, ProgramState *state) {
-  auto idx = smart_find_index(analysis_funcs_order, input);
-  if (idx == -1) {
-    std::cout << "ERROR: Input must exactly match one analysis function!"
-              << std::endl;
+  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (name.empty())
     return CommandResult::FAILURE;
-  }
-
-  auto name = analysis_funcs_order[static_cast<size_t>(idx)];
 
   for (auto f : analysis_funcs_order) {
     state->enabled[f] = false;
@@ -204,7 +209,7 @@ CommandResult cmd_define_constant(const std::string input,
   remaining_input.erase(0, i);
 
   while (is_whitespace(input[0]))
-    remaining_input.erase(0);
+    remaining_input.erase(0, 1);
 
   if (remaining_input.empty()) {
     std::cout << "ERROR: Missing expression!" << std::endl;
@@ -241,13 +246,9 @@ CommandResult cmd_undefine_constant(const std::string input,
   for (const auto &[k, _] : state->user_constants)
     constant_keys.push_back(k);
 
-  auto idx = smart_find_index(constant_keys, input);
-  if (idx == -1) {
-    std::cout << "ERROR: Input must exactly match one constant!" << std::endl;
+  auto name = input_helper(constant_keys, input, "constants");
+  if (name.empty())
     return CommandResult::FAILURE;
-  }
-
-  auto name = constant_keys[static_cast<size_t>(idx)];
 
   state->user_constants.erase(name);
 
@@ -258,6 +259,9 @@ CommandResult cmd_undefine_constant(const std::string input,
 
 CommandResult execute_command(const std::string input, ProgramState *state) {
   std::string remaining_input = input;
+  while (remaining_input[0] == ' ')
+    remaining_input.erase(0, 1);
+
   if (remaining_input[0] != '/') {
     return CommandResult::NOT_COMMAND;
   }
@@ -274,12 +278,20 @@ CommandResult execute_command(const std::string input, ProgramState *state) {
   i = 0;
   while (i < remaining_input.size() && remaining_input[i] != ' ')
     i++;
-  auto command_name = remaining_input.substr(0, i);
-  auto it = cmd_funcs.find(command_name);
+  auto input_command = remaining_input.substr(0, i);
 
-  if (it == cmd_funcs.end()) {
+  std::vector<std::string> command_keys;
+  for (const auto &[k, _] : cmd_funcs)
+    command_keys.push_back(k);
+
+  auto idx = smart_find_index(command_keys, input_command);
+  if (idx == -1) {
     return CommandResult::INVALID_COMMAND;
+  } else if (idx == -2) {
+    return CommandResult::AMBIGIOUS_COMMAND;
   }
 
+  auto name = command_keys[static_cast<size_t>(idx)];
+  auto it = cmd_funcs.find(name);
   return it->second.func(remaining_input.erase(0, i + 1), state);
 };

@@ -37,11 +37,15 @@ int main() {
     if (cmd_res == CommandResult::QUIT) {
       break;
     } else if (cmd_res == CommandResult::MISSING_COMMAND) {
-      std::cout << "Missing command." << std::endl;
+      std::cout << "ERROR: Missing command." << std::endl;
       continue;
     } else if (cmd_res == CommandResult::INVALID_COMMAND) {
-      std::cout << "Invalid command." << std::endl;
+      std::cout << "ERROR: Invalid command." << std::endl;
       continue;
+    } else if (cmd_res == CommandResult::AMBIGIOUS_COMMAND) {
+      std::cout << "ERROR: Ambigious command." << std::endl;
+      continue;
+
     } else if ((cmd_res == CommandResult::SUCCESS) ||
                (cmd_res == CommandResult::FAILURE)) {
       continue;
@@ -58,11 +62,13 @@ int main() {
       continue;
     }
 
-    auto decimal_input = std::get<long double>(evaluation);
-    std::cout << "Evaluator output: " << decimal_input << std::endl;
+    auto evaled = std::get<long double>(evaluation);
+    std::cout << "Evaluator output: " << evaled << std::endl;
     // Handle invalids TODO
-    auto integer_input = static_cast<int64_t>(decimal_input);
+    auto integer_input = static_cast<int64_t>(evaled);
     std::cout << "As integer: " << integer_input << std::endl;
+
+    state.user_constants["ans"] = evaled;
 
     const auto analysis = analyze_number(integer_input, state.enabled);
 

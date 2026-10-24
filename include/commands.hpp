@@ -11,6 +11,7 @@ enum class CommandResult {
   NOT_COMMAND,
   MISSING_COMMAND,
   INVALID_COMMAND,
+  AMBIGIOUS_COMMAND,
 };
 
 struct ProgramState {

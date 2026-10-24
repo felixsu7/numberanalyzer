@@ -72,6 +72,7 @@ static const std::map<std::string, MathFuncDef> math_funcs{
 
 // https://en.wikipedia.org/wiki/List_of_mathematical_constants
 static const std::map<std::string, long double> default_math_consts{
+    {"ans", 0},
     {"pi", 3.14159265358979323846},
     {"e", 2.71828182845904523536},
     {"tau", 6.28318530717958647692},
