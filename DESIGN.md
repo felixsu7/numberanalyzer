@@ -116,6 +116,10 @@ In fact, since we have easy access to the front framebuffer, we can simply "run 
 
 Before we go to the higher levels of drawing commands, we need to handle the inputs first.
 
+### Interlude: Unicode
+
+TODO
+
 ### Input handling
 
 TODO
@@ -132,7 +136,7 @@ TODO
 
 TODO
 
-### Summary
+### Summary of the TUI
 
 TODO
 

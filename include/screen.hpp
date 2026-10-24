@@ -30,8 +30,9 @@ struct Cell {
   Color fg;
   Color bg;
   CellAttr attrs;
-  void cell_set_glyph(Cell *c, const char *s, size_t width);
 };
+
+void cell_set_glyph(Cell *c, const char *s, int width);
 
 inline const Cell default_cell =
     Cell{{' '}, 1, {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
@@ -39,6 +40,7 @@ inline const Cell default_cell =
 class Screen {
 public:
   Screen(int w, int h);
+  ~Screen();
   PLATFORM_ERROR activate();
   PLATFORM_ERROR deactivate();
   void put(int x, int y, Cell c);

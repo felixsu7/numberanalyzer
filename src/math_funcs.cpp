@@ -11,29 +11,37 @@
 static const std::string endl = "\n";
 static std::stringstream cout = std::stringstream();
 
-// The order of definitions was based on when they were submitted.
+// The order of definitions was based on when they were submitted
 
-void num_divisbility(int64_t num1, int64_t num2) {
-  // now, dito kayo mag code
-  if (num1 % num2 == 0) {
-    cout << num1 << " is divisible by " << num2 << endl;
-  } else {
-    cout << num1 << " is not divisible by " << num2 << endl;
+// It should be noted that I modified their submissions, mainly on checks, the
+// mathematical basis is kept exactly as they intended.
+
+// Originally, this accepted two inputs.
+// However, I turned it into analysis of what numbers does it divide cleanly
+// with. Checking from 1 to N.
+void num_divisbility(int64_t num) {
+  if (num == 0) {
+    cout << "Zero divided by any number is always zero." << endl;
+    return;
   }
 
-  if (num2 == 0) {
-    cout << "ERROR: Can not divide by zero." << endl;
-  };
+  cout << num << "is divisible by ";
+  for (int64_t d = 1; d <= abs(num); d++) {
+    if (num % d == 0) {
+      cout << d << ", ";
+    }
+  }
+
+  cout << endl;
 }
 
-void num_sign(int64_t num1, int64_t _) {
-
-  if (num1 < 0) {
-    cout << num1 << " is negative." << endl;
-  } else if (num1 == 0) {
-    cout << num1 << " is zero." << endl;
+void num_sign(int64_t num) {
+  if (num < 0) {
+    cout << num << " is negative." << endl;
+  } else if (num == 0) {
+    cout << num << " is zero." << endl;
   } else {
-    cout << num1 << " is positive." << endl;
+    cout << num << " is positive." << endl;
   }
 }
 
@@ -67,11 +75,12 @@ std::vector<int64_t> _primefactors(int64_t n) {
   return factors;
 }
 
-void num_prime_factors(int64_t num1, int64_t _) {
-  auto prime_factors = _primefactors(num1);
-  // real ba?
+void num_prime_factors(int64_t num) {
+  auto prime_factors = _primefactors(num);
+
+  // TODO real ba?
   if (prime_factors.empty()) {
-    cout << num1 << " has no prime factors." << endl;
+    cout << num << " has no prime factors." << endl;
     return;
   }
 
@@ -82,167 +91,179 @@ void num_prime_factors(int64_t num1, int64_t _) {
   cout << endl;
 }
 
-void num_perfect_square_cube(int64_t num1, int64_t _) {
+void num_perfect_square_cube(int64_t num) {
   // I added this check.
-  if (num1 < 0) {
+  if (num < 0) {
     cout << "ERROR: Input cannot be negative." << endl;
     return;
   }
 
-  int64_t iskwerot = static_cast<int64_t>(round(sqrt(num1)));
-  int64_t kyubrot = static_cast<int64_t>(round(cbrt(num1)));
+  int64_t iskwerot = static_cast<int64_t>(round(sqrt(num)));
+  int64_t kyubrot = static_cast<int64_t>(round(cbrt(num)));
 
-  if (num1 >= 0 && iskwerot * iskwerot == num1) {
-    cout << num1 << " is a perfect square." << endl;
+  if (num >= 0 && iskwerot * iskwerot == num) {
+    cout << num << " is a perfect square." << endl;
   } else {
-    cout << num1 << " is not a perfect square." << endl;
+    cout << num << " is not a perfect square." << endl;
   }
 
-  if (kyubrot * kyubrot * kyubrot == num1) {
-    cout << num1 << " is a perfect cube." << endl;
+  if (kyubrot * kyubrot * kyubrot == num) {
+    cout << num << " is a perfect cube." << endl;
   } else {
-    cout << num1 << " is not a perfect cube." << endl;
-  }
-}
-
-void num_even_odd(int64_t num1, int64_t _) {
-  if (num1 % 2 == 0) {
-    cout << num1 << " is an even number." << endl;
-  } else {
-    cout << num1 << " is an odd number." << endl;
+    cout << num << " is not a perfect cube." << endl;
   }
 }
 
-void num_factors_sum(int64_t num1, int64_t _) {
+void num_even_odd(int64_t num) {
+  if (num % 2 == 0) {
+    cout << num << " is an even number." << endl;
+  } else {
+    cout << num << " is an odd number." << endl;
+  }
+}
+
+void num_factors_sum(int64_t num) {
   int64_t sum = 0;
 
-  for (int64_t x = 1; x <= num1; x++) {
-    if (num1 % x == 0) {
+  if (num < 0) {
+    cout << "ERROR: Input cannot be negative." << endl;
+    return;
+  }
+
+  for (int64_t x = 1; x <= num; x++) {
+    if (num % x == 0) {
       // cout << x << ", ";
       sum += x;
     }
   }
-  cout << num1 << " has sum of factors of " << sum << "." << endl;
+  cout << num << " has sum of positive factors of " << sum << "." << endl;
 }
 
-void num_factors_amount(int64_t num1, int64_t _) {
+void num_factors_amount(int64_t num) {
   int64_t factorCount = 0;
 
-  if (num1 == 0) {
+  if (num == 0) {
     cout << "Zero has infinitely many factors.";
   } else {
-    for (int divisor = 1; divisor <= abs(num1); divisor++) {
-      if (num1 % divisor == 0) {
+    for (int divisor = 1; divisor <= abs(num); divisor++) {
+      if (num % divisor == 0) {
         factorCount += 2;
       }
     }
 
-    cout << num1 << " has " << factorCount << " factor(s)." << endl;
+    cout << num << " has " << factorCount << " factor(s)." << endl;
   }
 }
 
-void num_prime_composite(int64_t num1, int64_t _) {
+void num_prime_composite(int64_t num) {
   int64_t divisor = 0;
 
   // How about 1, 0, and the negatives?
-  if (num1 < 2) {
-    cout << num1 << " is neither prime nor composite.";
+  if (num <= 0) {
+    cout << "ERROR: " << num << " is not a natural number (1+).";
+  } else if (num <= 1) {
+    cout << "One is neither prime nor composite.";
   } else {
-    for (divisor = 2; divisor < num1; divisor++) {
-      if (num1 % divisor == 0) {
+    for (divisor = 2; divisor < num; divisor++) {
+      if (num % divisor == 0) {
         break;
       }
     }
 
-    if (divisor == num1) {
-      cout << num1 << " is a prime number.";
+    if (divisor == num) {
+      cout << num << " is a prime number.";
     } else {
-      cout << num1 << " is a composite number.";
+      cout << num << " is a composite number.";
     }
   }
 }
 
-void num_collatz(int64_t num1, int64_t _) {
-  // Felix's TODO: somehow yield due to long running times, potentially.
-  int64_t Colture = num1;
+void num_collatz(int64_t num) {
+  int64_t Colture = num;
 
   // I added this check because it is infinitely looping on negative and zeroes.
-  if (num1 <= 0) {
+  if (num <= 0) {
     cout << "ERROR: Input cannot be negative or zero." << endl;
     return;
   }
 
-  while (Colture != 1) {
+  // Without limiting to N iterations, this would just lag the entire program.
+  const int COLLATZ_ITERATIONS_LIMIT = 100;
+  int iteration = 0;
+
+  while (Colture != 1 && iteration < COLLATZ_ITERATIONS_LIMIT) {
     cout << Colture << ", ";
 
     if (Colture % 2 == 0) {
       Colture = Colture / 2;
-    }
-
-    else {
+    } else {
       Colture = (Colture * 3) + 1;
     }
+
+    iteration++;
+  }
+
+  if (iteration >= COLLATZ_ITERATIONS_LIMIT) {
+    cout << "..., ";
   }
 
   cout << 1 << endl;
 }
 
-void num_perfect(int64_t num1, int64_t _) {
+void num_perfect(int64_t num) {
   // Numbers <= 1 cannot be perfect numbers (the smallest perfect number is 6)
-  if (num1 <= 1) {
-    cout << num1 << " is not a perfect number." << endl;
+  if (num <= 1) {
+    cout << num << " is not a perfect number." << endl;
     return;
   }
 
   int64_t divisor_sum = 1; // 1 is always a proper divisor
   // Stop at sqrt to avoid checking duplicate divisor pairs
-  for (int64_t i = 2; i <= std::sqrt(num1); i++) {
-    if (num1 % i == 0) {
+  for (int64_t i = 2; i <= std::sqrt(num); i++) {
+    if (num % i == 0) {
       divisor_sum += i; // Add smaller divisor
-      if (i != num1 / i) {
-        divisor_sum += num1 / i; // Add matching larger divisor pair
+      if (i != num / i) {
+        divisor_sum += num / i; // Add matching larger divisor pair
       }
     }
   }
 
-  if (divisor_sum == num1) {
-    cout << num1 << " is a perfect number." << endl;
+  if (divisor_sum == num) {
+    cout << num << " is a perfect number." << endl;
   } else {
-    cout << num1 << " is not a perfect number" << endl;
+    cout << num << " is not a perfect number" << endl;
   }
 }
 
-void num_nth_triangular(int64_t num1, int64_t _) {
-  if (num1 < 0) {
-    cout << "ERROR: Input cannot be negative." << std::endl;
+void num_nth_triangular(int64_t num) {
+  if (num < 0) {
+    cout << "ERROR: Input cannot be negative." << endl;
     return;
   }
 
   // Triangular number: n(n+1)/2
   // TODO: change th to proper suffix
-  cout << num1 << "th triangular number is " << (num1 * (num1 + 1)) / 2 << endl;
+  cout << num << "th triangular number is " << (num * (num + 1)) / 2 << endl;
 }
 
-void num_is_triangular(int64_t num1, int64_t _) {
-  if (num1 < 0) {
-    cout << num1 << " is not a triangular number." << endl;
+void num_is_triangular(int64_t num) {
+  if (num < 0) {
+    cout << num << " is not a triangular number." << endl;
     return;
   }
 
   // A number is a triangular number if 8x + 1 is a perfect square.
-  int64_t val = 8 * num1 + 1;
+  int64_t val = 8 * num + 1;
   int64_t root = static_cast<int64_t>(std::sqrt(val));
 
   if (root * root == val) {
-    cout << num1 << " is a triangular number." << endl;
+    cout << num << " is a triangular number." << endl;
   } else {
-    cout << num1 << " is not a triangular number." << endl;
+    cout << num << " is not a triangular number." << endl;
   }
 }
 
-void num_factors(int64_t num1, int64_t _) {
-  cout << "NOT IMPLEMENTED YET." << endl;
-}
+void num_factors(int64_t num) { cout << "NOT IMPLEMENTED YET." << endl; }
 
 void dump_logs(std::string name, string_vec_map *logs) {
   std::string line;
@@ -254,15 +275,14 @@ void dump_logs(std::string name, string_vec_map *logs) {
   cout.clear();
 }
 
-NumberAnalysis analyze_number(int64_t num1, int64_t num2) {
+NumberAnalysis analyze_number(int64_t num) {
   cout.str("");
   cout.clear();
   auto analysis = NumberAnalysis{};
-  analysis.num1 = num1;
-  analysis.num2 = num2;
+  analysis.num = num;
 
   for (auto [name, func] : math_funcs_map) {
-    func(num1, num2);
+    func(num);
     dump_logs(name, &analysis.logs);
   }
 

@@ -151,16 +151,6 @@ PLATFORM_ERROR platform_poll_event(uint64_t timeout_millis,
 
 uint64_t platform_monotime() { return static_cast<uint64_t>(GetTickCount64()); }
 
-PLATFORM_ERROR platform_beep(uint64_t duration_millis) {
-  if (duration_millis == 0)
-    return PLATFORM_ERROR::NONE;
-  const DWORD duration = duration_millis > static_cast<uint64_t>(MAXDWORD)
-                             ? MAXDWORD
-                             : static_cast<DWORD>(duration_millis);
-  return Beep(750, duration) ? PLATFORM_ERROR::NONE
-                             : PLATFORM_ERROR::WINDOWS_INIT;
-}
-
 #endif
 
 #ifdef PLAT_UNIX
@@ -214,6 +204,7 @@ PLATFORM_ERROR platform_term_deactivate() {
   return PLATFORM_ERROR::NONE;
 };
 
+// TODO better
 PLATFORM_ERROR platform_poll_event(uint64_t timeout_millis,
                                    PlatformEvent *out) {
   memset(out, 0, sizeof(PlatformEvent));
@@ -253,10 +244,6 @@ uint64_t platform_monotime() {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return static_cast<uint64_t>(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-};
-
-PLATFORM_ERROR platform_beep(uint64_t duration_millis) {
-
 };
 
 #endif

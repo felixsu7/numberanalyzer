@@ -7,11 +7,10 @@
 
 using string_vec_map = std::map<std::string, std::vector<std::string>>;
 
-using math_function = void(int64_t num1, int64_t num2);
+using math_function = void(int64_t num);
 
 struct NumberAnalysis {
-  int64_t num1;
-  int64_t num2;
+  int64_t num;
   string_vec_map logs;
   string_vec_map errors;
 };
@@ -47,4 +46,4 @@ static const std::map<std::string, math_function *> math_funcs_map = {
     {"nth Triangular Number", num_nth_triangular},
 };
 
-NumberAnalysis analyze_number(int64_t num1, int64_t num2);
+NumberAnalysis analyze_number(int64_t num);

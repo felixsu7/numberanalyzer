@@ -39,6 +39,13 @@ Screen::Screen(int w, int h) {
   last_draw = 0;
 }
 
+// TODO make this work
+Screen::~Screen() {
+  if (activated) {
+    deactivate();
+  }
+}
+
 PLATFORM_ERROR Screen::activate() {
   PLATFORM_ERROR err = platform_term_activate();
   if (err != PLATFORM_ERROR::NONE) {

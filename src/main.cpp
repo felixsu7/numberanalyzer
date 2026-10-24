@@ -8,27 +8,7 @@
 #include <iostream>
 #include <stdio.h>
 
-PLATFORM_ERROR enter_tui_mode() {
-  // TODO: query screen size
-  Screen screen(100, 50);
-  screen.activate();
-  Cell c = default_cell;
-  bool running = true;
-  while (running) {
-    PlatformEvent ev = screen.event_poll(100);
-    c.bg.active = true;
-    c.bg.red = 127;
-    c.bg.green = 127;
-    c.bg.blue = 127;
-    screen.draw_rect(0, 0, 100, 50, c);
-    screen.present();
-    if (ev.key == 'q') {
-      running = false;
-      break;
-    }
-  }
-  return screen.deactivate();
-}
+PLATFORM_ERROR enter_tui_mode();
 
 int main() {
   // enter_tui_mode();
@@ -43,6 +23,7 @@ int main() {
       break;
     } else if (input == "tui") {
       enter_tui_mode();
+      continue;
     }
     auto evaluation = evaluate_expression(input);
     if (std::holds_alternative<EvaluationError>(evaluation)) {
@@ -60,7 +41,7 @@ int main() {
     std::cout << "As integer: " << integer_input << std::endl;
 
     // TODO: num2
-    const auto analysis = analyze_number(integer_input, 1);
+    const auto analysis = analyze_number(integer_input);
 
     for (auto [f, v] : analysis.logs) {
       std::cout << f << ":" << std::endl;
@@ -73,4 +54,28 @@ int main() {
   }
 
   return 0;
+}
+
+PLATFORM_ERROR enter_tui_mode() {
+  // TODO: query screen size
+  Screen screen(100, 50);
+  screen.activate();
+  Cell c = default_cell;
+  cell_set_glyph(&c, "A", 1);
+  bool running = true;
+  while (running) {
+    PlatformEvent ev = screen.event_poll(100);
+    c.bg.active = true;
+    c.bg.red = 127;
+    c.bg.green = 127;
+    c.bg.blue = 127;
+    // why
+    screen.draw_rect(0, 0, 101, 50, c);
+    screen.present();
+    if (ev.key == 'q') {
+      running = false;
+      break;
+    }
+  }
+  return screen.deactivate();
 }
