@@ -1,35 +1,58 @@
+#include "analysis.hpp"
 #include "evaluator.hpp"
-#include "math_funcs.hpp"
 #include "platform.hpp"
 #include "screen.hpp"
 #include <cerrno>
+#include <commands.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <stdio.h>
 
 PLATFORM_ERROR enter_tui_mode();
+void display_welcome_banner();
 
 int main() {
-  // enter_tui_mode();
-  bool running = true;
   std::string input;
+  display_welcome_banner();
+  auto state = ProgramState{};
+  state.running = true;
+  state.user_constants = default_math_consts;
 
-  while (running) {
+  for (auto f : analysis_funcs_order) {
+    state.enabled[f] = true;
+  }
+
+  while (state.running) {
+    std::cout
+        << std::endl
+        << "Input an integer to analyze, an expression like '2*-(42+3)' to "
+           "evaluate and analyze, or type '/info' for more details"
+        << std::endl;
     std::cout << "> ";
+    // std::in immediately returns on space
     std::getline(std::cin, input);
-    if (input == "quit") {
-      running = false;
+
+    auto cmd_res = execute_command(input, &state);
+
+    if (cmd_res == CommandResult::QUIT) {
       break;
-    } else if (input == "tui") {
-      enter_tui_mode();
+    } else if (cmd_res == CommandResult::MISSING_COMMAND) {
+      std::cout << "Missing command." << std::endl;
+      continue;
+    } else if (cmd_res == CommandResult::INVALID_COMMAND) {
+      std::cout << "Invalid command." << std::endl;
+      continue;
+    } else if ((cmd_res == CommandResult::SUCCESS) ||
+               (cmd_res == CommandResult::FAILURE)) {
       continue;
     }
-    auto evaluation = evaluate_expression(input);
+
+    // Not a command, so we continue on expressions
+    auto evaluation = evaluate_expression(input, state.user_constants);
     if (std::holds_alternative<EvaluationError>(evaluation)) {
       auto err = std::get<EvaluationError>(evaluation);
 
-      std::cout << "EVAL ERROR: " << err.message << " (" << err.offending
+      std::cout << "ERROR: " << err.message << " (" << err.offending
                 << ") at position " << err.pos << std::endl;
 
       continue;
@@ -37,11 +60,11 @@ int main() {
 
     auto decimal_input = std::get<long double>(evaluation);
     std::cout << "Evaluator output: " << decimal_input << std::endl;
+    // Handle invalids TODO
     auto integer_input = static_cast<int64_t>(decimal_input);
     std::cout << "As integer: " << integer_input << std::endl;
 
-    // TODO: num2
-    const auto analysis = analyze_number(integer_input);
+    const auto analysis = analyze_number(integer_input, state.enabled);
 
     for (auto [f, v] : analysis.logs) {
       std::cout << f << ":" << std::endl;
@@ -78,4 +101,8 @@ PLATFORM_ERROR enter_tui_mode() {
     }
   }
   return screen.deactivate();
+}
+
+void display_welcome_banner() {
+  std::cout << "NUMBER THEORY ANALYZER" << std::endl;
 }

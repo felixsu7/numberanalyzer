@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -17,12 +16,14 @@
 // Also, it's a long double first since trig functions would otherwise just
 // return 0 almost always.
 
-bool is_num(char c) { return c >= '0' && c <= '9'; }
-bool is_alpha(char c) {
+static bool is_num(char c) { return c >= '0' && c <= '9'; }
+static bool is_alpha(char c) {
   return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
-bool is_whitespace(char c) { return (c == ' ') || (c == '\n') || (c == '\t'); }
-bool is_alphanum(char c) { return is_num(c) || is_alpha(c); }
+static bool is_whitespace(char c) {
+  return (c == ' ') || (c == '\n') || (c == '\t');
+}
+static bool is_alphanum(char c) { return is_num(c) || is_alpha(c); }
 
 int prec(char c) {
   switch (c) {
@@ -107,7 +108,7 @@ class Evaluator {
 
     if (is_alpha(c)) {
       size_t start = pos;
-      while (is_alpha(source[pos]))
+      while (is_alphanum(source[pos]))
         pos++;
       std::string id = source.substr(start, pos - start);
 
@@ -125,8 +126,8 @@ class Evaluator {
           return EvaluationError{pos, "Missing ending parenthesis", ")"};
         };
 
-        auto it = mfuncs.find(id);
-        if (it == mfuncs.end())
+        auto it = math_funcs.find(id);
+        if (it == math_funcs.end())
           return EvaluationError{start, "Unknown function", id};
 
         if (args.size() != it->second.arity)
@@ -141,8 +142,9 @@ class Evaluator {
         return val;
       } else {
         // Constants
-        auto it = mconsts.find(id);
-        if (it == mconsts.end())
+        // TODO take in a map of consts
+        auto it = user_constants.find(id);
+        if (it == user_constants.end())
           return EvaluationError{start, "Unknown constant", id};
         return it->second;
       }
@@ -182,6 +184,7 @@ class Evaluator {
   }
 
 public:
+  std::map<std::string, long double> user_constants;
   EvaluationResult evaluate_expression(std::string expr) {
     source = expr;
     pos = 0;
@@ -196,7 +199,10 @@ public:
   }
 };
 
-EvaluationResult evaluate_expression(std::string expr) {
+EvaluationResult
+evaluate_expression(std::string expr,
+                    std::map<std::string, long double> user_constants) {
   Evaluator p;
+  p.user_constants = user_constants;
   return p.evaluate_expression(expr);
 }

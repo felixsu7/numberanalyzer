@@ -1,8 +1,8 @@
+#include <analysis.hpp>
 #include <cassert>
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
-#include <math_funcs.hpp>
 #include <sstream>
 #include <stdio.h>
 #include <string>
@@ -25,7 +25,7 @@ void num_divisbility(int64_t num) {
     return;
   }
 
-  cout << num << "is divisible by ";
+  cout << num << " is divisible by ";
   for (int64_t d = 1; d <= abs(num); d++) {
     if (num % d == 0) {
       cout << d << ", ";
@@ -235,6 +235,19 @@ void num_perfect(int64_t num) {
   }
 }
 
+std::string num_suffix(int64_t num) {
+  auto ones = num % 10;
+  if (ones == 1) {
+    return "st";
+  } else if (ones == 2) {
+    return "nd";
+  } else if (ones == 3) {
+    return "rd";
+  } else {
+    return "th";
+  }
+}
+
 void num_nth_triangular(int64_t num) {
   if (num < 0) {
     cout << "ERROR: Input cannot be negative." << endl;
@@ -243,7 +256,8 @@ void num_nth_triangular(int64_t num) {
 
   // Triangular number: n(n+1)/2
   // TODO: change th to proper suffix
-  cout << num << "th triangular number is " << (num * (num + 1)) / 2 << endl;
+  cout << num << num_suffix(num) << " triangular number is "
+       << (num * (num + 1)) / 2 << endl;
 }
 
 void num_is_triangular(int64_t num) {
@@ -265,7 +279,7 @@ void num_is_triangular(int64_t num) {
 
 void num_factors(int64_t num) { cout << "NOT IMPLEMENTED YET." << endl; }
 
-void dump_logs(std::string name, string_vec_map *logs) {
+void dump_logs(const std::string name, string_vec_map *logs) {
   std::string line;
   while (std::getline(cout, line, '\n')) {
     (*logs)[name].push_back(line);
@@ -275,13 +289,17 @@ void dump_logs(std::string name, string_vec_map *logs) {
   cout.clear();
 }
 
-NumberAnalysis analyze_number(int64_t num) {
+NumberAnalysis analyze_number(int64_t num,
+                              const std::map<std::string, bool> enabled) {
   cout.str("");
   cout.clear();
   auto analysis = NumberAnalysis{};
   analysis.num = num;
 
-  for (auto [name, func] : math_funcs_map) {
+  for (auto [name, func] : analysis_funcs) {
+    // Skip functions that are not enabled.
+    if (auto it = enabled.find(name); it != enabled.end() && !it->second)
+      continue;
     func(num);
     dump_logs(name, &analysis.logs);
   }
