@@ -1,3 +1,4 @@
+#include "evaluator.hpp"
 #include "math_funcs.hpp"
 #include "platform.hpp"
 #include "screen.hpp"
@@ -5,9 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-#include <random>
 #include <stdio.h>
-#include <thread>
 
 PLATFORM_ERROR enter_tui_mode() {
   // TODO: query screen size
@@ -38,27 +37,30 @@ int main() {
 
   while (running) {
     std::cout << "> ";
-    std::cin >> input;
+    std::getline(std::cin, input);
     if (input == "quit") {
       running = false;
       break;
     } else if (input == "tui") {
       enter_tui_mode();
     }
-    char *end;
-    errno = 0;
-    int64_t numeric_input = strtoll(input.c_str(), &end, 10);
-    if (errno == ERANGE) {
-      std::cout << "Number is out of range." << std::endl;
-      continue;
-    }
-    if (end == input.c_str()) {
-      std::cout << "Number cannot be parsed." << std::endl;
+    auto evaluation = evaluate_expression(input);
+    if (std::holds_alternative<EvaluationError>(evaluation)) {
+      auto err = std::get<EvaluationError>(evaluation);
+
+      std::cout << "EVAL ERROR: " << err.message << " (" << err.offending
+                << ") at position " << err.pos << std::endl;
+
       continue;
     }
 
+    auto decimal_input = std::get<long double>(evaluation);
+    std::cout << "Evaluator output: " << decimal_input << std::endl;
+    auto integer_input = static_cast<int64_t>(decimal_input);
+    std::cout << "As integer: " << integer_input << std::endl;
+
     // TODO: num2
-    const NumberAnalysis analysis = analyze_number(numeric_input, 1);
+    const auto analysis = analyze_number(integer_input, 1);
 
     for (auto [f, v] : analysis.logs) {
       std::cout << f << ":" << std::endl;

@@ -93,7 +93,7 @@ void num_perfect_square_cube(int64_t num1, int64_t _) {
   int64_t kyubrot = static_cast<int64_t>(round(cbrt(num1)));
 
   if (num1 >= 0 && iskwerot * iskwerot == num1) {
-    cout << num1 << "is a perfect square." << endl;
+    cout << num1 << " is a perfect square." << endl;
   } else {
     cout << num1 << " is not a perfect square." << endl;
   }
@@ -166,9 +166,9 @@ void num_collatz(int64_t num1, int64_t _) {
   // Felix's TODO: somehow yield due to long running times, potentially.
   int64_t Colture = num1;
 
-  // I added this check because it is infinitely looping on negatives.
-  if (num1 < 0) {
-    cout << "ERROR: Input cannot be negative." << endl;
+  // I added this check because it is infinitely looping on negative and zeroes.
+  if (num1 <= 0) {
+    cout << "ERROR: Input cannot be negative or zero." << endl;
     return;
   }
 
@@ -257,7 +257,7 @@ void dump_logs(std::string name, string_vec_map *logs) {
 NumberAnalysis analyze_number(int64_t num1, int64_t num2) {
   cout.str("");
   cout.clear();
-  NumberAnalysis analysis = NumberAnalysis{};
+  auto analysis = NumberAnalysis{};
   analysis.num1 = num1;
   analysis.num2 = num2;
 
