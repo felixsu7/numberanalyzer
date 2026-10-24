@@ -1,5 +1,4 @@
-#ifndef PLATFORM_H
-#define PLATFORM_H
+#pragma once
 
 #if defined(_WIN32)
 #define PLAT_WINDOWS 1
@@ -52,7 +51,7 @@ struct PlatformEvent {
   bool alt;
   bool control;
 
-  char glyph;
+  char key;
 
   PLATFORM_EVENT_MOUSE_KEY mouse_key;
   // points to a character, not exact pixel values
@@ -80,7 +79,3 @@ PLATFORM_ERROR platform_poll_event(uint64_t timeout_millis, PlatformEvent *out);
 // returns a monotonic milli timestamp starting from a certain point
 // so this is not starting from unix epoch
 uint64_t platform_monotime();
-// in millis, and may not beep for the exact duration, but the closest
-PLATFORM_ERROR platform_beep(uint64_t duration_millis);
-
-#endif // !PLATFORM_H

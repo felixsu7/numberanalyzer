@@ -23,7 +23,7 @@ PLATFORM_ERROR enter_tui_mode() {
     c.bg.blue = 127;
     screen.draw_rect(0, 0, 100, 50, c);
     screen.present();
-    if (ev.glyph == 'q') {
+    if (ev.key == 'q') {
       running = false;
       break;
     }
@@ -32,43 +32,43 @@ PLATFORM_ERROR enter_tui_mode() {
 }
 
 int main() {
-  enter_tui_mode();
-  // bool running = true;
-  // std::string input;
-  //
-  // while (running) {
-  //   std::cout << "> ";
-  //   std::cin >> input;
-  //   if (input == "quit") {
-  //     running = false;
-  //     break;
-  //   } else if (input == "tui") {
-  //     enter_tui_mode();
-  //   }
-  //   char *end;
-  //   errno = 0;
-  //   int64_t numeric_input = strtoll(input.c_str(), &end, 10);
-  //   if (errno == ERANGE) {
-  //     std::cout << "Number is out of range." << std::endl;
-  //     continue;
-  //   }
-  //   if (end == input.c_str()) {
-  //     std::cout << "Number cannot be parsed." << std::endl;
-  //     continue;
-  //   }
-  //
-  //   // TODO: num2
-  //   const NumberAnalysis analysis = analyze_number(numeric_input, 1);
-  //
-  //   for (auto [f, v] : analysis.logs) {
-  //     std::cout << f << ":" << std::endl;
-  //     for (auto l : v) {
-  //       std::cout << "    " << l << std::endl;
-  //     }
-  //   }
-  //
-  //   std::cout << std::endl << std::endl;
-  // }
-  //
+  // enter_tui_mode();
+  bool running = true;
+  std::string input;
+
+  while (running) {
+    std::cout << "> ";
+    std::cin >> input;
+    if (input == "quit") {
+      running = false;
+      break;
+    } else if (input == "tui") {
+      enter_tui_mode();
+    }
+    char *end;
+    errno = 0;
+    int64_t numeric_input = strtoll(input.c_str(), &end, 10);
+    if (errno == ERANGE) {
+      std::cout << "Number is out of range." << std::endl;
+      continue;
+    }
+    if (end == input.c_str()) {
+      std::cout << "Number cannot be parsed." << std::endl;
+      continue;
+    }
+
+    // TODO: num2
+    const NumberAnalysis analysis = analyze_number(numeric_input, 1);
+
+    for (auto [f, v] : analysis.logs) {
+      std::cout << f << ":" << std::endl;
+      for (auto l : v) {
+        std::cout << "    " << l << std::endl;
+      }
+    }
+
+    std::cout << std::endl << std::endl;
+  }
+
   return 0;
 }

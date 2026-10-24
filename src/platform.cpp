@@ -238,7 +238,7 @@ PLATFORM_ERROR platform_poll_event(uint64_t timeout_millis,
   if (pfd.revents & (POLLIN | POLLHUP)) {
     ssize_t r = read(STDIN_FILENO, &c, 1);
     if (r == 1) {
-      out->glyph = c;
+      out->key = c;
     } else if (r == 0) {
       return PLATFORM_ERROR::UNIX_INPUT;
     } else if (errno != EINTR) {

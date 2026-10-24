@@ -1,5 +1,4 @@
-#ifndef SCREEN_H
-#define SCREEN_H
+#pragma once
 #include "platform.hpp"
 #include <array>
 #include <cstdint>
@@ -31,11 +30,10 @@ struct Cell {
   Color fg;
   Color bg;
   CellAttr attrs;
+  void cell_set_glyph(Cell *c, const char *s, size_t width);
 };
 
-void cell_set_glyph(Cell *c, const char *s, size_t width);
-
-const Cell default_cell =
+inline const Cell default_cell =
     Cell{{' ', 0}, 1, {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
 
 class Screen {
@@ -70,5 +68,3 @@ private:
   std::vector<Cell> back_framebuffer;
   uint64_t last_draw;
 };
-
-#endif // !SCREEN_H
