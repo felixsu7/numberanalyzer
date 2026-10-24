@@ -128,7 +128,7 @@ std::string style_delta_seq(CellAttr attrs, CellAttr old, CellAttr style,
   }
 }
 
-void cell_set_glyph(Cell *c, const char *s, size_t width) {
+void cell_set_glyph(Cell *c, const char *s, int width) {
   if (*s == 0) {
     cell_set_glyph(c, " ", 1);
     return;
@@ -146,11 +146,14 @@ void cell_set_glyph(Cell *c, const char *s, size_t width) {
 std::string cell_seq(Cell c, Cell old) {
   std::string seq;
   bool reset = false;
+
+  // We immediately intercept degenerate glyphs.
   if (c.cp[0] == 0) {
     c.cp[0] = ' ';
     c.cp[1] = 0;
   }
 
+  // We can't reset fg or bg individually, only reset all.
   if ((!c.fg.active && old.fg.active) || (!c.bg.active && old.bg.active)) {
     seq += "\033[0m";
     reset = true;
@@ -184,6 +187,7 @@ std::string cell_seq(Cell c, Cell old) {
     seq += style_delta_seq(c.attrs, old_attrs, ATTR_REVERSE, "7;", "27;");
     seq += style_delta_seq(c.attrs, old_attrs, ATTR_HIDDEN, "8;", "28;");
     seq += style_delta_seq(c.attrs, old_attrs, ATTR_STRIKE, "9;", "29;");
+
     // replace last semicolon with m
     seq.pop_back();
     seq += 'm';
@@ -198,7 +202,7 @@ std::string cell_seq(Cell c, Cell old) {
 }
 
 void Screen::present() {
-  // limit according to FPS here
+  // Limit according to FPS
   const uint64_t now = platform_monotime();
   if ((last_draw + static_cast<uint64_t>(1.0 / SCREEN_FPS) * 1000) > now) {
     std::transform(back_framebuffer.begin(), back_framebuffer.end(),
@@ -210,24 +214,23 @@ void Screen::present() {
   std::string payload;
   // std::cout << std::endl << "============ NEW FRAME ==========" << std::endl;
   payload += TERM_SYNC_BEGIN + HOME_CURSOR + RESET_STYLE;
-  // push (back - front) diffs to term
 
+  // push (back - front) diffs to term
   Cell old_cell = default_cell;
-  for (size_t y = 0; y < _h; y++) {
+  for (int y = 0; y < _h; y++) {
     int last_change_pos = 0;
-    for (size_t x = 0; x < _w; x++) {
-      Cell f = front_framebuffer[(y * _w) + x];
-      Cell b = back_framebuffer[(y * _w) + x];
+    for (int x = 0; x < _w; x++) {
+      Cell f = front_framebuffer[static_cast<size_t>((y * _w) + x)];
+      Cell b = back_framebuffer[static_cast<size_t>((y * _w) + x)];
 
       // safe, all set to zero and no paddings on Cell.
+      // TODO: confirm if thats still the case
       if (memcmp(&f, &b, sizeof(Cell)) != 0) {
+        // Don't emit a cursor move if we are just moving to the right, saves a
+        // lot.
         if (last_change_pos != x - 1)
           payload += move_cursor_seq(x, y);
         payload += cell_seq(b, old_cell);
-        // x += b.width - 1;
-        // for (size_t i = 0; i < b.width - 1; i++) {
-        //   cell_set_glyph(&back_framebuffer[(y * _w) + x + i], " ", 1);
-        // }
         old_cell = b;
         last_change_pos = y * _w + x;
       }
@@ -247,15 +250,17 @@ void Screen::present() {
 void Screen::draw_hline(int x, int y, int w, Cell c) {
   // perhaps this can optimized to something like memset?
   // its gonna be used by alot of functions
-  for (int xp = 0; xp < w; xp++) {
-    put(x + xp, y, c);
+  for (int dx = 0; dx < w; dx++) {
+    put(x + dx, y, c);
   }
 };
+
 void Screen::draw_vline(int x, int y, int h, Cell c) {
-  for (int yp = 0; yp < h; yp++) {
-    put(x, y + yp, c);
+  for (int dy = 0; dy < h; dy++) {
+    put(x, y + dy, c);
   }
 };
+
 void Screen::draw_line(int x1, int y1, int x2, int y2, Cell c) {
   // classic bresenham has issues so we adapt this
   // https://haqr.eu/tinyrenderer/bresenham/
@@ -269,34 +274,36 @@ void Screen::draw_line(int x1, int y1, int x2, int y2, Cell c) {
     std::swap(y1, y2);
   }
   for (int x = x1; x <= x2; x++) {
-    float t = (x - x1) / static_cast<float>(x2 - x1);
-    int y = std::round(y1 + (y2 - y1) * t);
+    double t = static_cast<double>(x - x1) / static_cast<double>(x2 - x1);
+    int y = static_cast<int>(std::round(y1 + (y2 - y1) * t));
     if (steep) // if transposed, de−transpose
       put(x, y, c);
     else
       put(x, y, c);
   }
 }
+
 void Screen::draw_rect(int x, int y, int w, int h, Cell c) {
-  for (int yp = 0; yp < h; yp++) {
-    draw_hline(x, y + yp, w, c);
+  for (int dy = 0; dy < h; dy++) {
+    draw_hline(x, y + dy, w, c);
   }
 };
 
-// doesnt support unicode
+// doesnt support unicode btw.
 void Screen::draw_text(int x, int y, const std::string text, Cell style) {
   // guessing this is unoptimal
-  int xp = 0;
+  int dx = 0;
   Cell c = style;
   c.width = 1;
   memset(&c.cp, 0, sizeof(c.cp));
+
   for (auto ch : text) {
     if (static_cast<unsigned char>(ch) & 0x80)
       continue;
-    // TODO: unicode
+
     c.cp[0] = ch;
-    put(x + xp, y, c);
-    xp++;
+    put(x + dx, y, c);
+    dx++;
   }
 };
 

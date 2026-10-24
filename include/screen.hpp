@@ -26,7 +26,7 @@ enum CellAttr : uint32_t {
 
 struct Cell {
   std::array<char, 16> cp;
-  uint32_t width;
+  int width;
   Color fg;
   Color bg;
   CellAttr attrs;
@@ -34,7 +34,7 @@ struct Cell {
 };
 
 inline const Cell default_cell =
-    Cell{{' ', 0}, 1, {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
+    Cell{{' '}, 1, {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
 
 class Screen {
 public:
@@ -63,7 +63,7 @@ public:
 
 private:
   bool activated;
-  size_t _w, _h;
+  int _w, _h;
   std::vector<Cell> front_framebuffer;
   std::vector<Cell> back_framebuffer;
   uint64_t last_draw;
