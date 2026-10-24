@@ -1,6 +1,7 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 #include "platform.hpp"
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,14 +26,17 @@ enum CellAttr : uint32_t {
 };
 
 struct Cell {
-  char32_t glyph;
+  std::array<char, 16> cp;
+  uint32_t width;
   Color fg;
   Color bg;
   CellAttr attrs;
 };
 
+void cell_set_glyph(Cell *c, const char *s, size_t width);
+
 const Cell default_cell =
-    Cell{' ', {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
+    Cell{{' ', 0}, 1, {0, 0, 0, false}, {0, 0, 0, false}, ATTR_NONE};
 
 class Screen {
 public:
@@ -51,6 +55,8 @@ public:
   void move_cursor(int x, int y);
   void toggle_cursor(bool state);
 
+  PlatformEvent event_poll(uint64_t timeout_millis);
+
   void draw_hline(int x, int y, int w, Cell c);
   void draw_vline(int x, int y, int h, Cell c);
   void draw_line(int x1, int y1, int x2, int y2, Cell c);
@@ -59,7 +65,7 @@ public:
 
 private:
   bool activated;
-  int _w, _h;
+  size_t _w, _h;
   std::vector<Cell> front_framebuffer;
   std::vector<Cell> back_framebuffer;
   uint64_t last_draw;

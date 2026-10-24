@@ -3,44 +3,32 @@
 #include "screen.hpp"
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <random>
 #include <stdio.h>
 #include <thread>
 
 PLATFORM_ERROR enter_tui_mode() {
+  // TODO: query screen size
   Screen screen(100, 50);
-  Cell c = default_cell;
-  int running = 0;
-  int px = 0;
-  int py = 0;
-  std::random_device rd;
-  std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<int64_t> dist(-10000, 10000);
-  std::uniform_int_distribution<int64_t> distd(-5, 5);
-  std::uniform_int_distribution<int64_t> distpos(0, 50);
-
   screen.activate();
-  c.glyph = '0';
-  c.fg.active = true;
-  c.bg.active = true;
-  while (running < 200) {
-    for (int i = 0; i < 5; i++) {
-      c.fg.red += distd(gen) * 3;
-      c.fg.green += distd(gen) * 3;
-      c.fg.blue += distd(gen) * 3;
-      c.bg.red += distd(gen) * 3;
-      c.bg.green += distd(gen) * 3;
-      c.bg.blue += distd(gen) * 3;
-
-      screen.draw_rect(distpos(gen), distpos(gen), 3, 3, c);
-    }
+  Cell c = default_cell;
+  bool running = true;
+  while (running) {
+    PlatformEvent ev = screen.event_poll(100);
+    c.bg.active = true;
+    c.bg.red = 127;
+    c.bg.green = 127;
+    c.bg.blue = 127;
+    screen.draw_rect(0, 0, 100, 50, c);
     screen.present();
-    running++;
-    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    if (ev.glyph == 'q') {
+      running = false;
+      break;
+    }
   }
   return screen.deactivate();
-  return PLATFORM_ERROR::NONE;
 }
 
 int main() {

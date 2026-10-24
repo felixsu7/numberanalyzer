@@ -2,6 +2,7 @@
 #include "platform.hpp"
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -89,10 +90,18 @@ void Screen::clear() {
 
 void Screen::put(int x, int y, Cell c) {
   // reject out of bounds
-  if ((x < 0) || (x >= _w) || (y < 0) || (y >= _h)) {
+  if (((x + c.width - 1) < 0) || ((x + c.width - 1) >= _w) || (y < 0) ||
+      (y >= _h)) {
     return;
   }
+
   back_framebuffer[static_cast<size_t>((y * _w) + x)] = c;
+
+  for (int i = 1; i < c.width; i++) {
+    Cell spacer = c;
+    spacer.cp = {" "};
+    back_framebuffer[static_cast<size_t>((y * _w) + x + i)] = spacer;
+  }
 }
 
 std::string move_cursor_seq(int x, int y) {
@@ -119,9 +128,28 @@ std::string style_delta_seq(CellAttr attrs, CellAttr old, CellAttr style,
   }
 }
 
+void cell_set_glyph(Cell *c, const char *s, size_t width) {
+  if (*s == 0) {
+    cell_set_glyph(c, " ", 1);
+    return;
+  }
+
+  memset(&c->cp, 0, sizeof(c->cp));
+  for (size_t i = 0; i < 16; i++) {
+    if (s[i] == 0)
+      break;
+    c->cp[i] = s[i];
+  }
+  c->width = width;
+}
+
 std::string cell_seq(Cell c, Cell old) {
   std::string seq;
   bool reset = false;
+  if (c.cp[0] == 0) {
+    c.cp[0] = ' ';
+    c.cp[1] = 0;
+  }
 
   if ((!c.fg.active && old.fg.active) || (!c.bg.active && old.bg.active)) {
     seq += "\033[0m";
@@ -147,6 +175,7 @@ std::string cell_seq(Cell c, Cell old) {
     CellAttr old_attrs = old.attrs;
     if (reset)
       old_attrs = ATTR_NONE;
+    // Same reset seq, should consider
     seq += style_delta_seq(c.attrs, old_attrs, ATTR_BOLD, "1;", "22;");
     seq += style_delta_seq(c.attrs, old_attrs, ATTR_DIM, "2;", "22;");
     seq += style_delta_seq(c.attrs, old_attrs, ATTR_ITALIC, "3;", "23;");
@@ -160,7 +189,11 @@ std::string cell_seq(Cell c, Cell old) {
     seq += 'm';
   }
 
-  seq.push_back(c.glyph);
+  for (size_t i = 0; i < 16; i++) {
+    if (c.cp[i] == 0)
+      break;
+    seq.push_back(c.cp[i]);
+  }
   return seq;
 }
 
@@ -180,17 +213,21 @@ void Screen::present() {
   // push (back - front) diffs to term
 
   Cell old_cell = default_cell;
-  int last_change_pos = 0;
-  for (int y = 0; y < _h; y++) {
-    for (int x = 0; x < _w; x++) {
+  for (size_t y = 0; y < _h; y++) {
+    int last_change_pos = 0;
+    for (size_t x = 0; x < _w; x++) {
       Cell f = front_framebuffer[(y * _w) + x];
       Cell b = back_framebuffer[(y * _w) + x];
 
       // safe, all set to zero and no paddings on Cell.
       if (memcmp(&f, &b, sizeof(Cell)) != 0) {
-        if (last_change_pos != (y * _w + x - 1))
+        if (last_change_pos != x - 1)
           payload += move_cursor_seq(x, y);
         payload += cell_seq(b, old_cell);
+        // x += b.width - 1;
+        // for (size_t i = 0; i < b.width - 1; i++) {
+        //   cell_set_glyph(&back_framebuffer[(y * _w) + x + i], " ", 1);
+        // }
         old_cell = b;
         last_change_pos = y * _w + x;
       }
@@ -245,15 +282,29 @@ void Screen::draw_rect(int x, int y, int w, int h, Cell c) {
     draw_hline(x, y + yp, w, c);
   }
 };
+
+// doesnt support unicode
 void Screen::draw_text(int x, int y, const std::string text, Cell style) {
   // guessing this is unoptimal
-  int text_length = static_cast<int>(text.length());
-  for (int xp = 0; xp < text_length; xp++) {
-    Cell c = style;
-    c.glyph = text.at(static_cast<int>(xp));
+  int xp = 0;
+  Cell c = style;
+  c.width = 1;
+  memset(&c.cp, 0, sizeof(c.cp));
+  for (auto ch : text) {
+    if (static_cast<unsigned char>(ch) & 0x80)
+      continue;
+    // TODO: unicode
+    c.cp[0] = ch;
     put(x + xp, y, c);
+    xp++;
   }
 };
+
+PlatformEvent Screen::event_poll(uint64_t timeout_millis) {
+  PlatformEvent ev;
+  platform_poll_event(timeout_millis, &ev);
+  return ev;
+}
 
 int Screen::width() { return _w; }
 
