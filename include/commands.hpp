@@ -16,7 +16,8 @@ enum class CommandResult {
 
 struct ProgramState {
   bool running;
-  std::map<std::string, bool> enabled;
+  std::vector<int64_t> history;
+  std::map<std::string, bool> enabled_analysis;
   std::map<std::string, double> user_constants;
 };
 

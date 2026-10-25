@@ -2,7 +2,18 @@
 #include "evaluator.hpp"
 #include "styling.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
+
+bool fits_long(double d) {
+  constexpr double lo = static_cast<double>(std::numeric_limits<long>::min());
+  constexpr double hi = -lo;
+  return d >= lo && d < hi && d == std::trunc(d);
+}
+unsigned long uabs(long x) {
+  return x < 0 ? 0 - static_cast<unsigned long>(x)
+               : static_cast<unsigned long>(x);
+}
 
 bool is_num(char c) { return c >= '0' && c <= '9'; }
 bool is_alpha(char c) {
@@ -14,9 +25,14 @@ bool is_alphanum(char c) { return is_num(c) || is_alpha(c); }
 std::string trim_string(const std::string s) {
   std::string res = s;
   while (!res.empty() && is_whitespace(res.front()))
-    res.erase(res.begin());
+    res.erase(0, 1);
   while (!res.empty() && is_whitespace(res.back()))
-    res.erase(res.end());
+    res.erase(res.size() - 1, 1);
+  // Unicode content has their most significant bit set.
+  for (size_t i = 0; i < res.size(); i++) {
+    if (res[i] & 0x80)
+      res.replace(i, 1, "?");
+  }
   return res;
 }
 
@@ -27,15 +43,46 @@ std::string lower_case_string(const std::string s) {
   return res;
 }
 
+std::pair<std::string, std::string> consume_front_string(const std::string s) {
+  std::string remaining = s;
+  size_t i = 0;
+  while (is_whitespace(remaining[i]))
+    i++;
+  remaining.erase(0, i);
+
+  i = 0;
+  while (is_alphanum(remaining[i]))
+    i++;
+  auto consumed = remaining.substr(0, i);
+
+  while (is_whitespace(remaining[i]))
+    i++;
+  remaining.erase(0, i);
+
+  return {consumed, remaining};
+}
+
 // Returns the index into items of the closest match to the key.
 // Returns -1 if not found, or -2 if found two or more matches.
 int smart_find_index(const std::vector<std::string> items,
                      const std::string key) {
-  auto lowered_key = trim_string(lower_case_string(key));
-  auto lowered_items = items;
-  std::transform(lowered_items.begin(), lowered_items.end(),
-                 lowered_items.begin(),
-                 [](const std::string s) { return lower_case_string(s); });
+  auto transformed_key = lower_case_string(key);
+  // Remove every whitespace
+  for (size_t i = 0; i < transformed_key.size(); i++) {
+    if (is_whitespace(transformed_key[i]))
+      transformed_key.erase(i, 1);
+  }
+  auto transformed_items = items;
+  // Here too.
+  std::transform(transformed_items.begin(), transformed_items.end(),
+                 transformed_items.begin(), [](const std::string s) {
+                   std::string res = s;
+                   for (size_t i = 0; i < res.size(); i++) {
+                     if (is_whitespace(res[i]))
+                       res.erase(i, 1);
+                   }
+                   return lower_case_string(res);
+                 });
 
   std::string current_key;
   size_t key_idx = 0;
@@ -43,14 +90,14 @@ int smart_find_index(const std::vector<std::string> items,
   bool match = false;
 
   while (!match && key_idx < key.size()) {
-    current_key.push_back(lowered_key[key_idx++]);
+    current_key.push_back(transformed_key[key_idx++]);
     match_idx = -1;
     match = false;
 
-    for (size_t i = 0; i < lowered_items.size(); i++) {
+    for (size_t i = 0; i < transformed_items.size(); i++) {
       // is current_key a prefix of i?
       auto res = std::mismatch(current_key.begin(), current_key.end(),
-                               lowered_items[i].begin());
+                               transformed_items[i].begin());
 
       if (res.first == current_key.end()) {
         // first match of current key

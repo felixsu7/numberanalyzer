@@ -1,3 +1,4 @@
+#include "utils.hpp"
 #include <analysis.hpp>
 #include <cassert>
 #include <cerrno>
@@ -23,11 +24,13 @@ void num_divisbility(int64_t num) {
   if (num == 0) {
     cout << "Zero divided by any number is always zero." << endl;
     return;
-  }
+  };
 
+  // Regular abs is erroring out in large enough negative values, so we handle
+  // negatives seperately, check utils.cpp
   cout << num << " is divisible by ";
-  for (int64_t d = 1; d <= abs(num); d++) {
-    if (num % d == 0) {
+  for (uint64_t d = 1; d <= uabs(num); d++) {
+    if (uabs(num) % d == 0) {
       cout << d << ", ";
     }
   }

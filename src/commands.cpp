@@ -3,6 +3,7 @@
 #include "evaluator.hpp"
 #include "styling.hpp"
 #include "utils.hpp"
+#include <cstdlib>
 #include <iostream>
 
 CommandResult cmd_info(const std::string _, ProgramState *state) {
@@ -14,8 +15,10 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
 
   std::cout << std::endl << style_info("Analysis functions: ") << std::endl;
   for (auto af : analysis_funcs_order) {
-    std::cout << " - " << (state->enabled[af] ? af : style_strikethrough(af))
-              << (state->enabled[af] ? "" : " (Disabled)") << std::endl;
+    std::cout << " - "
+              << (state->enabled_analysis[af] ? af : style_strikethrough(af))
+              << (state->enabled_analysis[af] ? "" : " (Disabled)")
+              << std::endl;
   }
 
   std::cout << std::endl << style_info("Commands: ") << std::endl;
@@ -100,7 +103,7 @@ CommandResult cmd_enable(const std::string input, ProgramState *state) {
   auto af = input_helper(analysis_funcs_order, input, "analysis functions");
   if (af.empty())
     return CommandResult::FAILURE;
-  state->enabled[af] = true;
+  state->enabled_analysis[af] = true;
 
   std::cout << style_output_primary("Enabled analysis function: " + af)
             << std::endl;
@@ -113,7 +116,7 @@ CommandResult cmd_disable(const std::string input, ProgramState *state) {
   if (af.empty())
     return CommandResult::FAILURE;
 
-  state->enabled[af] = false;
+  state->enabled_analysis[af] = false;
 
   std::cout << style_output_primary("Disabled analysis function: " + af)
             << std::endl;
@@ -126,9 +129,10 @@ CommandResult cmd_toggle(const std::string input, ProgramState *state) {
   if (af.empty())
     return CommandResult::FAILURE;
 
-  state->enabled[af] = !state->enabled[af];
+  state->enabled_analysis[af] = !state->enabled_analysis[af];
 
-  auto af_state = std::string(state->enabled[af] ? "Enabled" : "Disabled");
+  auto af_state =
+      std::string(state->enabled_analysis[af] ? "Enabled" : "Disabled");
 
   std::cout << style_output_primary(af_state + " analysis function: " + af)
             << std::endl;
@@ -142,10 +146,10 @@ CommandResult cmd_only(const std::string input, ProgramState *state) {
     return CommandResult::FAILURE;
 
   for (auto inner_af : analysis_funcs_order) {
-    state->enabled[inner_af] = false;
+    state->enabled_analysis[inner_af] = false;
   }
 
-  state->enabled[af] = true;
+  state->enabled_analysis[af] = true;
 
   std::cout << style_output_primary("Only enabled analysis function: " + af)
             << std::endl;
@@ -155,7 +159,7 @@ CommandResult cmd_only(const std::string input, ProgramState *state) {
 
 CommandResult cmd_enable_all(const std::string _, ProgramState *state) {
   for (auto af : analysis_funcs_order) {
-    state->enabled[af] = true;
+    state->enabled_analysis[af] = true;
   }
 
   std::cout << style_output_primary("Enabled all analysis functions!")
@@ -172,30 +176,24 @@ CommandResult cmd_define_constant(const std::string input,
   }
 
   std::string remaining_input = input;
-  size_t i = 0;
-  while (is_alphanum(remaining_input[i]))
-    i++;
-  auto name = remaining_input.substr(0, i);
-  remaining_input.erase(0, i);
-
-  remaining_input = trim_string(remaining_input);
+  auto consumed = consume_front_string(remaining_input);
   if (remaining_input.empty()) {
     std::cout << style_error("ERROR: Missing expression!") << std::endl;
     return CommandResult::FAILURE;
   }
 
-  auto res = evaluate_expression(remaining_input, state->user_constants);
+  auto res = evaluate_expression(consumed.second, state->user_constants);
   if (handle_error(&res))
     return CommandResult::FAILURE;
   auto val = std::get<double>(res);
 
   auto already_exists =
-      state->user_constants.find(name) != state->user_constants.end();
+      state->user_constants.find(consumed.first) != state->user_constants.end();
   auto def_msg = std::string(already_exists ? "Redefined" : "Defined");
 
-  state->user_constants[name] = val;
+  state->user_constants[consumed.first] = val;
 
-  std::cout << style_output_primary(def_msg + " " + name + " as " +
+  std::cout << style_output_primary(def_msg + " " + consumed.first + " as " +
                                     std::to_string(val));
 
   return CommandResult::SUCCESS;
@@ -218,37 +216,79 @@ CommandResult cmd_undefine_constant(const std::string input,
   return CommandResult::SUCCESS;
 }
 
-CommandResult cmd_exact_input(const std::string input, ProgramState *state) {}
-CommandResult cmd_history(const std::string input, ProgramState *state) {}
+CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
+  char *end;
+  int64_t exact = std::strtoll(input.c_str(), &end, 10);
+  if (end == input.c_str()) {
+    auto err = static_cast<EvaluationResult>(
+        EvaluationError{0, "Expected number", ""});
+    handle_error(&err);
+    return CommandResult::FAILURE;
+  }
+
+  const auto analysis = analyze_number(exact, state->enabled_analysis);
+  state->history.push_back(analysis.num);
+
+  for (auto af : analysis_funcs_order) {
+    // if disabled yet somehow exists in logs, skip.
+    // also includes sanity checks
+    if (auto it = state->enabled_analysis.find(af);
+        it != state->enabled_analysis.end() && !it->second &&
+        analysis.logs.find(af) != analysis.logs.end())
+      continue;
+
+    std::cout << style_info(af) << ":" << std::endl;
+    for (auto l : analysis.logs.find(af)->second) {
+      std::cout << "    " << style_output_primary(l) << std::endl;
+    }
+    if (analysis.errors.find(af) != analysis.errors.end())
+      for (auto l : analysis.errors.find(af)->second) {
+        std::cout << style_error("ERROR: " + l) << std::endl;
+      }
+  }
+
+  std::cout << std::endl;
+
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_history(const std::string _, ProgramState *state) {
+  std::cout << style_info("History (" + std::to_string(state->history.size()) +
+                          " entries):")
+            << " ";
+
+  if (state->history.size() > 0) {
+    for (size_t i = 0; i < state->history.size(); i++) {
+      std::cout << style_output_primary(
+          std::to_string(state->history[state->history.size() - i - 1]));
+      if (i != state->history.size() - 1)
+        std::cout << ", ";
+    }
+  } else {
+    std::cout << style_error("Empty");
+  }
+
+  std::cout << std::endl;
+  return CommandResult::SUCCESS;
+}
 
 CommandResult execute_command(const std::string input, ProgramState *state) {
   std::string remaining_input = input;
-  while (remaining_input[0] == ' ')
-    remaining_input.erase(0, 1);
-
   if (remaining_input[0] != '/') {
     return CommandResult::NOT_COMMAND;
   }
+  remaining_input.erase(0, 1);
 
-  size_t i = 1;
-  while (i < remaining_input.size() && remaining_input[i] == ' ')
-    i++;
-  remaining_input.erase(0, i);
-
-  if (remaining_input.empty()) {
+  auto consumed = consume_front_string(remaining_input);
+  if (consumed.first.empty()) {
     return CommandResult::MISSING_COMMAND;
   }
-
-  i = 0;
-  while (i < remaining_input.size() && remaining_input[i] != ' ')
-    i++;
-  auto input_command = remaining_input.substr(0, i);
 
   std::vector<std::string> command_keys;
   for (const auto &[k, _] : cmd_funcs)
     command_keys.push_back(k);
 
-  auto idx = smart_find_index(command_keys, input_command);
+  auto idx = smart_find_index(command_keys, consumed.first);
   if (idx == -1) {
     return CommandResult::INVALID_COMMAND;
   } else if (idx == -2) {
@@ -257,5 +297,5 @@ CommandResult execute_command(const std::string input, ProgramState *state) {
 
   auto name = command_keys[static_cast<size_t>(idx)];
   auto it = cmd_funcs.find(name);
-  return it->second.func(remaining_input.erase(0, i + 1), state);
+  return it->second.func(consumed.second, state);
 };

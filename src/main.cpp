@@ -5,7 +5,6 @@
 #include "styling.hpp"
 #include "utils.hpp"
 #include <cerrno>
-#include <cmath>
 #include <commands.hpp>
 #include <cstdlib>
 #include <cstring>
@@ -22,7 +21,7 @@ int main() {
   state.running = true;
   state.user_constants = default_math_consts;
   for (auto f : analysis_funcs_order) {
-    state.enabled[f] = true;
+    state.enabled_analysis[f] = true;
   }
 
   std::string user_input;
@@ -30,7 +29,7 @@ int main() {
   while (state.running) {
     std::cout
         << std::endl
-        << style_info(
+        << style_italic(
                "Input an integer to analyze, an expression like '2*-(42+3)' to "
                "evaluate and analyze, or type '/info' for more details")
         << std::endl;
@@ -87,7 +86,7 @@ int main() {
     auto evaled = std::get<double>(res);
     std::cout << style_info("Evaluator output: ")
               << style_output_secondary(std::to_string(evaled)) << std::endl;
-    if (!std::isfinite(evaled)) {
+    if (!fits_long(evaled)) {
       std::cout << style_error("ERROR: " + std::to_string(evaled) +
                                " is too large to be analyzed!")
                 << std::endl;
@@ -99,13 +98,14 @@ int main() {
 
     state.user_constants["ans"] = evaled;
 
-    const auto analysis = analyze_number(as_int, state.enabled);
+    const auto analysis = analyze_number(as_int, state.enabled_analysis);
+    state.history.push_back(analysis.num);
 
     for (auto af : analysis_funcs_order) {
       // if disabled yet somehow exists in logs, skip.
       // also includes sanity checks
-      if (auto it = state.enabled.find(af);
-          it != state.enabled.end() && !it->second &&
+      if (auto it = state.enabled_analysis.find(af);
+          it != state.enabled_analysis.end() && !it->second &&
           analysis.logs.find(af) != analysis.logs.end())
         continue;
 
