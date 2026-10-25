@@ -461,13 +461,11 @@ int main() {
 }
 
 void display_welcome_banner() {
-  std::cout << "NUMBER THEORY ANALYZER" << std::endl << std ::endl;
-
   std::vector<std::string> logo_lines;
 
-  logo_lines.push_back("       ++++++++++++                  \n");
-  logo_lines.push_back("     +++++++     +++++++             \n");
-  logo_lines.push_back("   +++++++          ++++++           \n");
+  logo_lines.push_back("        ++++++++++++                 \n");
+  logo_lines.push_back("    +++++++     +++++++              \n");
+  logo_lines.push_back("  +++++++          ++++++            \n");
   logo_lines.push_back(" +++++++     -      +++++++          \n");
   logo_lines.push_back("+++++++      -      +++++++          \n");
   logo_lines.push_back("+++++++  ++++-++++  +++++++          \n");
@@ -487,10 +485,15 @@ void display_welcome_banner() {
 
   // TODO gradient
   if (is_ansi_enabled())
-    std::cout << "\033[38;2;228;163;178m";
+    std::cout << "\033[38;2;228;163;178m\033[1m";
+
+  std::cout << "NUMERICAL PROPERTY AND DIVISIBILITY ANALYZER"
+            << " by " << "The 8-Bit Group!" << std::endl
+            << std ::endl;
   for (auto l : logo_lines) {
     std::cout << l;
   }
+
   if (is_ansi_enabled())
     std::cout << RESET_STYLE << std::endl;
 }
