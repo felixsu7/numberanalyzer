@@ -63,6 +63,9 @@ static const std::vector<std::string> analysis_funcs_order = {
     "nth Triangular Number",
 };
 
+void set_iterations_limit(uint n);
+uint get_iteration_limit();
+
 NumberAnalysis analyze_number(int64_t num,
                               const std::map<std::string, bool> enabled);
 
@@ -82,6 +85,7 @@ enum class CommandResult {
 
 struct ProgramState {
   bool running;
+  bool auto_repeat;
   std::vector<int64_t> history;
   std::map<std::string, bool> enabled_analysis;
   std::map<std::string, double> user_constants;
@@ -107,6 +111,8 @@ CommandFuncDef cmd_undefine_constant;
 CommandFuncDef cmd_exact_input;
 CommandFuncDef cmd_history;
 CommandFuncDef cmd_toggle_styling;
+CommandFuncDef cmd_set_iteration_limit;
+CommandFuncDef cmd_toggle_auto_repeat;
 
 static const std::map<std::string, CommandDef> cmd_funcs = {
     {"info",
@@ -137,7 +143,15 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
     {"history",
      {cmd_history, "Views past analyzed numbers during this session.", ""}},
     {"styling",
-     {cmd_toggle_styling, "Toggles color and styling of outputs.", ""}}};
+     {cmd_toggle_styling, "Toggles color and styling of outputs.", ""}},
+    {"iterations",
+     {cmd_set_iteration_limit,
+      "Sets the iteration limit of analysis functions (Currently only Collatz "
+      "Conjecture Sequence).",
+      "1000"}},
+    {"autorepeat", {cmd_toggle_auto_repeat, "Toggles auto-repeat.", ""}}
+
+};
 
 CommandResult execute_command(const std::string input, ProgramState *state);
 
@@ -447,6 +461,7 @@ int main() {
 
   auto state = ProgramState{};
   state.running = true;
+  state.auto_repeat = false;
   state.user_constants = default_math_consts;
   for (auto f : analysis_funcs_order) {
     state.enabled_analysis[f] = true;
@@ -544,17 +559,45 @@ int main() {
         continue;
 
       std::cout << style_info(af) << ":" << std::endl;
-      for (auto l : analysis.logs.find(af)->second) {
-        std::cout << "    " << style_output_primary(l) << std::endl;
-      }
+
+      if (analysis.logs.find(af) != analysis.logs.end())
+        for (auto l : analysis.logs.find(af)->second) {
+          std::cout << "    " << style_output_primary(l) << std::endl;
+        }
       if (analysis.errors.find(af) != analysis.errors.end())
         for (auto l : analysis.errors.find(af)->second) {
-          std::cout << style_error("ERROR: " + l) << std::endl;
+          std::cout << style_error("    ERROR: " + l) << std::endl;
         }
     }
 
     std::cout << std::endl;
+
+    if (!state.auto_repeat) {
+      while (true) {
+        std::cout << style_output_secondary(
+                         "Do you want to analyze another number? (y/N)")
+                  << std::endl;
+        std::cout << style_input_secondary("> ");
+        std::getline(std::cin, user_input);
+        user_input = lower_case_string(trim_string(user_input));
+        if (user_input.empty())
+          continue;
+        if (user_input[0] == 'y') {
+          break;
+        } else if (user_input[0] == 'n') {
+          state.running = false;
+          break;
+        } else {
+          std::cout << style_error("Please type in only either 'y' or 'n'.")
+                    << std::endl;
+          continue;
+        }
+      }
+    }
   }
+
+  std::cout << style_info("Exiting number theory analyzer! Goodbye!")
+            << std::endl;
 
   return 0;
 }
@@ -627,6 +670,12 @@ void display_welcome_banner() {
 
 static const std::string endl = "\n";
 static std::stringstream cout = std::stringstream();
+
+static uint ITERATION_LIMIT = 100;
+
+void set_iterations_limit(uint n) { ITERATION_LIMIT = n; }
+
+uint get_iteration_limit() { return ITERATION_LIMIT; }
 
 // The order of definitions was based on when they were submitted
 
@@ -806,11 +855,9 @@ void num_collatz(int64_t num) {
     return;
   }
 
-  // Without limiting to N iterations, this would just lag the entire program.
-  const int COLLATZ_ITERATIONS_LIMIT = 100;
-  int iteration = 0;
+  uint iteration = 0;
 
-  while (Colture != 1 && iteration < COLLATZ_ITERATIONS_LIMIT) {
+  while (Colture != 1 && iteration < ITERATION_LIMIT) {
     cout << Colture << ", ";
 
     if (Colture % 2 == 0) {
@@ -822,7 +869,7 @@ void num_collatz(int64_t num) {
     iteration++;
   }
 
-  if (iteration >= COLLATZ_ITERATIONS_LIMIT) {
+  if (iteration >= ITERATION_LIMIT) {
     cout << "..., ";
   }
 
@@ -896,12 +943,43 @@ void num_is_triangular(int64_t num) {
   }
 }
 
-void num_factors(int64_t num) { cout << "NOT IMPLEMENTED YET." << endl; }
+void num_factors(int64_t num) {
+  if (num == 0) {
+    cout << "Zero has infinite amount of factors." << endl;
+    return;
+  }
 
-void dump_logs(const std::string name, string_vec_map *logs) {
+  std::vector<int64_t> factors;
+  auto absolute = uabs(num);
+
+  for (uint64_t x = 1; x <= absolute; x++) {
+    if (absolute % x == 0) {
+      cout << x << ", ";
+    }
+  }
+}
+
+std::string clean_line(const std::string s) {
+  auto trimmed = trim_string(s);
+  if (trimmed.back() == ',')
+    trimmed.pop_back();
+  return trimmed;
+}
+
+void dump_logs(const std::string name, string_vec_map *logs,
+               string_vec_map *errors) {
+  const std::string ERROR_MARKER = "ERROR: ";
   std::string line;
+
   while (std::getline(cout, line, '\n')) {
-    (*logs)[name].push_back(line);
+    auto res =
+        std::mismatch(ERROR_MARKER.begin(), ERROR_MARKER.end(), line.begin());
+    // prefixed with ERROR:
+    if (res.first == ERROR_MARKER.end()) {
+      (*errors)[name].push_back(clean_line(line.erase(0, ERROR_MARKER.size())));
+    } else {
+      (*logs)[name].push_back(clean_line(line));
+    }
   }
 
   cout.str("");
@@ -920,7 +998,7 @@ NumberAnalysis analyze_number(int64_t num,
     if (auto it = enabled.find(name); it != enabled.end() && !it->second)
       continue;
     func(num);
-    dump_logs(name, &analysis.logs);
+    dump_logs(name, &analysis.logs, &analysis.errors);
   }
 
   // TODO: process errors
@@ -984,6 +1062,16 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
     first = false;
     std::cout << style_bold(uc + ": " + std::to_string(val));
   }
+
+  std::cout << std::endl
+            << std::endl
+            << style_info("Iteration limit (can be changed by /iterations): " +
+                          std::to_string(get_iteration_limit()));
+
+  std::cout << std::endl
+            << std::endl
+            << style_info("Auto-repeat is " +
+                          std::string(state->auto_repeat ? "on" : "off") + ".");
 
   std::cout << std::endl;
 
@@ -1163,12 +1251,14 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
       continue;
 
     std::cout << style_info(af) << ":" << std::endl;
-    for (auto l : analysis.logs.find(af)->second) {
-      std::cout << "    " << style_output_primary(l) << std::endl;
-    }
+
+    if (analysis.logs.find(af) != analysis.logs.end())
+      for (auto l : analysis.logs.find(af)->second) {
+        std::cout << "    " << style_output_primary(l) << std::endl;
+      }
     if (analysis.errors.find(af) != analysis.errors.end())
       for (auto l : analysis.errors.find(af)->second) {
-        std::cout << style_error("ERROR: " + l) << std::endl;
+        std::cout << style_error("    ERROR: " + l) << std::endl;
       }
   }
 
@@ -1208,6 +1298,39 @@ CommandResult cmd_toggle_styling(const std::string _, ProgramState *) {
               << std::endl;
   } else {
     std::cout << "Disabled colors and styling of outputs!" << std::endl;
+  }
+
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_set_iteration_limit(const std::string input,
+                                      ProgramState *_) {
+  char *end;
+  int64_t n = std::strtoll(input.c_str(), &end, 10);
+  if (end == input.c_str()) {
+    std::cout << style_error("Missing number.") << std::endl;
+    return CommandResult::FAILURE;
+  }
+
+  set_iterations_limit(static_cast<uint>(uabs(n)));
+
+  std::cout << style_output_primary("Set iteration limit to " +
+                                    std::to_string(n) + " iterations!")
+            << std::endl;
+
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_toggle_auto_repeat(const std::string _, ProgramState *state) {
+  state->auto_repeat = !state->auto_repeat;
+
+  if (state->auto_repeat) {
+    std::cout << style_output_primary(
+                     "Enabled auto-repeat! The program no longer asks if you "
+                     "want to analyze another number.")
+              << std::endl;
+  } else {
+    std::cout << style_output_primary("Disabled auto-repeat!") << std::endl;
   }
 
   return CommandResult::SUCCESS;
@@ -2094,13 +2217,12 @@ std::string style_output_secondary(std::string s) {
 }
 
 #include <algorithm>
-#include <cmath>
 #include <iostream>
 
 bool fits_long(double d) {
   constexpr double lo = static_cast<double>(std::numeric_limits<long>::min());
   constexpr double hi = -lo;
-  return d >= lo && d < hi && d == std::trunc(d);
+  return d >= lo && d < hi;
 }
 unsigned long uabs(long x) {
   return x < 0 ? 0 - static_cast<unsigned long>(x)

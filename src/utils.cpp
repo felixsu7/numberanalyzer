@@ -2,13 +2,12 @@
 #include "evaluator.hpp"
 #include "styling.hpp"
 #include <algorithm>
-#include <cmath>
 #include <iostream>
 
 bool fits_long(double d) {
   constexpr double lo = static_cast<double>(std::numeric_limits<long>::min());
   constexpr double hi = -lo;
-  return d >= lo && d < hi && d == std::trunc(d);
+  return d >= lo && d < hi;
 }
 unsigned long uabs(long x) {
   return x < 0 ? 0 - static_cast<unsigned long>(x)

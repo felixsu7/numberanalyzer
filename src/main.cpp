@@ -19,6 +19,7 @@ int main() {
 
   auto state = ProgramState{};
   state.running = true;
+  state.auto_repeat = false;
   state.user_constants = default_math_consts;
   for (auto f : analysis_funcs_order) {
     state.enabled_analysis[f] = true;
@@ -116,17 +117,45 @@ int main() {
         continue;
 
       std::cout << style_info(af) << ":" << std::endl;
-      for (auto l : analysis.logs.find(af)->second) {
-        std::cout << "    " << style_output_primary(l) << std::endl;
-      }
+
+      if (analysis.logs.find(af) != analysis.logs.end())
+        for (auto l : analysis.logs.find(af)->second) {
+          std::cout << "    " << style_output_primary(l) << std::endl;
+        }
       if (analysis.errors.find(af) != analysis.errors.end())
         for (auto l : analysis.errors.find(af)->second) {
-          std::cout << style_error("ERROR: " + l) << std::endl;
+          std::cout << style_error("    ERROR: " + l) << std::endl;
         }
     }
 
     std::cout << std::endl;
+
+    if (!state.auto_repeat) {
+      while (true) {
+        std::cout << style_output_secondary(
+                         "Do you want to analyze another number? (y/N)")
+                  << std::endl;
+        std::cout << style_input_secondary("> ");
+        std::getline(std::cin, user_input);
+        user_input = lower_case_string(trim_string(user_input));
+        if (user_input.empty())
+          continue;
+        if (user_input[0] == 'y') {
+          break;
+        } else if (user_input[0] == 'n') {
+          state.running = false;
+          break;
+        } else {
+          std::cout << style_error("Please type in only either 'y' or 'n'.")
+                    << std::endl;
+          continue;
+        }
+      }
+    }
   }
+
+  std::cout << style_info("Exiting number theory analyzer! Goodbye!")
+            << std::endl;
 
   return 0;
 }

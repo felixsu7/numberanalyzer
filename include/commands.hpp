@@ -16,6 +16,7 @@ enum class CommandResult {
 
 struct ProgramState {
   bool running;
+  bool auto_repeat;
   std::vector<int64_t> history;
   std::map<std::string, bool> enabled_analysis;
   std::map<std::string, double> user_constants;
@@ -41,6 +42,8 @@ CommandFuncDef cmd_undefine_constant;
 CommandFuncDef cmd_exact_input;
 CommandFuncDef cmd_history;
 CommandFuncDef cmd_toggle_styling;
+CommandFuncDef cmd_set_iteration_limit;
+CommandFuncDef cmd_toggle_auto_repeat;
 
 static const std::map<std::string, CommandDef> cmd_funcs = {
     {"info",
@@ -71,6 +74,14 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
     {"history",
      {cmd_history, "Views past analyzed numbers during this session.", ""}},
     {"styling",
-     {cmd_toggle_styling, "Toggles color and styling of outputs.", ""}}};
+     {cmd_toggle_styling, "Toggles color and styling of outputs.", ""}},
+    {"iterations",
+     {cmd_set_iteration_limit,
+      "Sets the iteration limit of analysis functions (Currently only Collatz "
+      "Conjecture Sequence).",
+      "1000"}},
+    {"autorepeat", {cmd_toggle_auto_repeat, "Toggles auto-repeat.", ""}}
+
+};
 
 CommandResult execute_command(const std::string input, ProgramState *state);

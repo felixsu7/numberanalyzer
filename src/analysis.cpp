@@ -10,6 +10,12 @@
 static const std::string endl = "\n";
 static std::stringstream cout = std::stringstream();
 
+static uint ITERATION_LIMIT = 100;
+
+void set_iterations_limit(uint n) { ITERATION_LIMIT = n; }
+
+uint get_iteration_limit() { return ITERATION_LIMIT; }
+
 // The order of definitions was based on when they were submitted
 
 // It should be noted that I modified their submissions, mainly on checks, the
@@ -188,11 +194,9 @@ void num_collatz(int64_t num) {
     return;
   }
 
-  // Without limiting to N iterations, this would just lag the entire program.
-  const int COLLATZ_ITERATIONS_LIMIT = 100;
-  int iteration = 0;
+  uint iteration = 0;
 
-  while (Colture != 1 && iteration < COLLATZ_ITERATIONS_LIMIT) {
+  while (Colture != 1 && iteration < ITERATION_LIMIT) {
     cout << Colture << ", ";
 
     if (Colture % 2 == 0) {
@@ -204,7 +208,7 @@ void num_collatz(int64_t num) {
     iteration++;
   }
 
-  if (iteration >= COLLATZ_ITERATIONS_LIMIT) {
+  if (iteration >= ITERATION_LIMIT) {
     cout << "..., ";
   }
 
@@ -278,12 +282,43 @@ void num_is_triangular(int64_t num) {
   }
 }
 
-void num_factors(int64_t num) { cout << "NOT IMPLEMENTED YET." << endl; }
+void num_factors(int64_t num) {
+  if (num == 0) {
+    cout << "Zero has infinite amount of factors." << endl;
+    return;
+  }
 
-void dump_logs(const std::string name, string_vec_map *logs) {
+  std::vector<int64_t> factors;
+  auto absolute = uabs(num);
+
+  for (uint64_t x = 1; x <= absolute; x++) {
+    if (absolute % x == 0) {
+      cout << x << ", ";
+    }
+  }
+}
+
+std::string clean_line(const std::string s) {
+  auto trimmed = trim_string(s);
+  if (trimmed.back() == ',')
+    trimmed.pop_back();
+  return trimmed;
+}
+
+void dump_logs(const std::string name, string_vec_map *logs,
+               string_vec_map *errors) {
+  const std::string ERROR_MARKER = "ERROR: ";
   std::string line;
+
   while (std::getline(cout, line, '\n')) {
-    (*logs)[name].push_back(line);
+    auto res =
+        std::mismatch(ERROR_MARKER.begin(), ERROR_MARKER.end(), line.begin());
+    // prefixed with ERROR:
+    if (res.first == ERROR_MARKER.end()) {
+      (*errors)[name].push_back(clean_line(line.erase(0, ERROR_MARKER.size())));
+    } else {
+      (*logs)[name].push_back(clean_line(line));
+    }
   }
 
   cout.str("");
@@ -302,7 +337,7 @@ NumberAnalysis analyze_number(int64_t num,
     if (auto it = enabled.find(name); it != enabled.end() && !it->second)
       continue;
     func(num);
-    dump_logs(name, &analysis.logs);
+    dump_logs(name, &analysis.logs, &analysis.errors);
   }
 
   // TODO: process errors

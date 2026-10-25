@@ -60,6 +60,16 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
     std::cout << style_bold(uc + ": " + std::to_string(val));
   }
 
+  std::cout << std::endl
+            << std::endl
+            << style_info("Iteration limit (can be changed by /iterations): " +
+                          std::to_string(get_iteration_limit()));
+
+  std::cout << std::endl
+            << std::endl
+            << style_info("Auto-repeat is " +
+                          std::string(state->auto_repeat ? "on" : "off") + ".");
+
   std::cout << std::endl;
 
   return CommandResult::SUCCESS;
@@ -238,12 +248,14 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
       continue;
 
     std::cout << style_info(af) << ":" << std::endl;
-    for (auto l : analysis.logs.find(af)->second) {
-      std::cout << "    " << style_output_primary(l) << std::endl;
-    }
+
+    if (analysis.logs.find(af) != analysis.logs.end())
+      for (auto l : analysis.logs.find(af)->second) {
+        std::cout << "    " << style_output_primary(l) << std::endl;
+      }
     if (analysis.errors.find(af) != analysis.errors.end())
       for (auto l : analysis.errors.find(af)->second) {
-        std::cout << style_error("ERROR: " + l) << std::endl;
+        std::cout << style_error("    ERROR: " + l) << std::endl;
       }
   }
 
@@ -283,6 +295,39 @@ CommandResult cmd_toggle_styling(const std::string _, ProgramState *) {
               << std::endl;
   } else {
     std::cout << "Disabled colors and styling of outputs!" << std::endl;
+  }
+
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_set_iteration_limit(const std::string input,
+                                      ProgramState *_) {
+  char *end;
+  int64_t n = std::strtoll(input.c_str(), &end, 10);
+  if (end == input.c_str()) {
+    std::cout << style_error("Missing number.") << std::endl;
+    return CommandResult::FAILURE;
+  }
+
+  set_iterations_limit(static_cast<uint>(uabs(n)));
+
+  std::cout << style_output_primary("Set iteration limit to " +
+                                    std::to_string(n) + " iterations!")
+            << std::endl;
+
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_toggle_auto_repeat(const std::string _, ProgramState *state) {
+  state->auto_repeat = !state->auto_repeat;
+
+  if (state->auto_repeat) {
+    std::cout << style_output_primary(
+                     "Enabled auto-repeat! The program no longer asks if you "
+                     "want to analyze another number.")
+              << std::endl;
+  } else {
+    std::cout << style_output_primary("Disabled auto-repeat!") << std::endl;
   }
 
   return CommandResult::SUCCESS;

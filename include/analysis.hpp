@@ -63,5 +63,8 @@ static const std::vector<std::string> analysis_funcs_order = {
     "nth Triangular Number",
 };
 
+void set_iterations_limit(uint n);
+uint get_iteration_limit();
+
 NumberAnalysis analyze_number(int64_t num,
                               const std::map<std::string, bool> enabled);
