@@ -23,5 +23,5 @@ std::pair<std::string, std::string> consume_front_string(const std::string s);
 int smart_find_index(const std::vector<std::string> items,
                      const std::string key);
 
-bool is_error(EvaluationResult res);
-bool handle_error(EvaluationResult *res);
+bool is_eval_error(EvaluationResult res);
+bool handle_eval_error(EvaluationResult *res, bool report_expr);

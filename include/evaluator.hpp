@@ -85,6 +85,7 @@ struct EvaluationError {
   size_t pos;
   std::string message;
   std::string offending;
+  std::string expr;
 };
 
 using EvaluationResult = std::variant<double, EvaluationError>;

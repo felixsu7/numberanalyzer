@@ -193,7 +193,7 @@ CommandResult cmd_define_constant(const std::string input,
   }
 
   auto res = evaluate_expression(consumed.second, state->user_constants);
-  if (handle_error(&res))
+  if (handle_eval_error(&res, false))
     return CommandResult::FAILURE;
   auto val = std::get<double>(res);
 
@@ -231,8 +231,8 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
   int64_t exact = std::strtoll(input.c_str(), &end, 10);
   if (end == input.c_str()) {
     auto err = static_cast<EvaluationResult>(
-        EvaluationError{0, "Expected number", ""});
-    handle_error(&err);
+        EvaluationError{0, "Expected number", "", ""});
+    handle_eval_error(&err, false);
     return CommandResult::FAILURE;
   }
 

@@ -2,6 +2,8 @@
 #include "utils.hpp"
 #include <cstdlib>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 
 // Based on https://nicolovaligi.com/articles/precedence-climbing
@@ -32,7 +34,7 @@ class Evaluator {
 
   EvaluationResult expression(int min) {
     auto left_res = primary();
-    if (is_error(left_res))
+    if (is_eval_error(left_res))
       return left_res;
     auto left = std::get<double>(left_res);
 
@@ -46,7 +48,7 @@ class Evaluator {
       // Exponentation is the only right-associative operator we have, so
       // ternary is fine.
       auto right_res = expression(op == '^' ? pr : pr + 1);
-      if (is_error(right_res))
+      if (is_eval_error(right_res))
         return right_res;
       auto right = std::get<double>(right_res);
 
@@ -62,7 +64,7 @@ class Evaluator {
         break;
       case '/':
         if (right == 0)
-          return EvaluationError{op_pos, "Division by zero", "0"};
+          return EvaluationError{op_pos, "Division by zero", "0", ""};
         left /= right;
         break;
       case '^':
@@ -78,11 +80,11 @@ class Evaluator {
     if (c == '(') {
       pos++;
       auto sub_res = expression(1);
-      if (is_error(sub_res))
+      if (is_eval_error(sub_res))
         return sub_res;
 
       if (!consume(')')) {
-        return EvaluationError{pos, "Missing ending parenthesis", ")"};
+        return EvaluationError{pos, "Missing ending parenthesis", ")", ""};
       };
 
       return std::get<double>(sub_res);
@@ -100,26 +102,26 @@ class Evaluator {
         if (peek() != ')')
           do {
             auto arg_res = expression(1);
-            if (is_error(arg_res))
+            if (is_eval_error(arg_res))
               return arg_res;
             args.push_back(std::get<double>(arg_res));
           } while (peek() == ',' && pos++);
         if (!consume(')')) {
-          return EvaluationError{pos, "Missing ending parenthesis", ")"};
+          return EvaluationError{pos, "Missing ending parenthesis", ")", ""};
         };
 
         auto it = math_funcs.find(id);
         if (it == math_funcs.end())
-          return EvaluationError{start, "Unknown function", id};
+          return EvaluationError{start, "Unknown function", id, ""};
 
         if (args.size() != it->second.arity)
           return EvaluationError{
               start, "Function " + id + " got wrong amount of arguments",
-              std::to_string(args.size())};
+              std::to_string(args.size()), ""};
 
         double val = it->second.func(args);
         if (!std::isfinite(val))
-          return EvaluationError{start, "Function domain error", id};
+          return EvaluationError{start, "Function domain error", id, ""};
 
         return val;
       } else {
@@ -127,14 +129,14 @@ class Evaluator {
         // TODO take in a map of consts
         auto it = user_constants.find(id);
         if (it == user_constants.end())
-          return EvaluationError{start, "Unknown constant", id};
+          return EvaluationError{start, "Unknown constant", id, ""};
         return it->second;
       }
     }
 
     if (consume('-')) {
       auto neg_res = expression(4);
-      if (is_error(neg_res))
+      if (is_eval_error(neg_res))
         return neg_res;
       return -std::get<double>(neg_res);
     }
@@ -143,7 +145,7 @@ class Evaluator {
     char *end;
     double decimal = std::strtod(source.c_str() + pos, &end);
     if (end == source.c_str() + pos)
-      return EvaluationError{pos, "Expected number", ""};
+      return EvaluationError{pos, "Expected number", "", ""};
 
     // Moves to position after last digit
     pos = static_cast<size_t>(end - source.c_str());
@@ -175,7 +177,13 @@ public:
     // Must consume all.
     if (peek() != '\0')
       return EvaluationError{pos, "Unexpected character",
-                             std::string(1, source[pos])};
+                             std::string(1, source[pos]), expr};
+
+    // na para bang christmas gift
+    if (auto err = std::get_if<EvaluationError>(&res)) {
+      err->expr = expr;
+      res = *err;
+    }
 
     return res;
   }

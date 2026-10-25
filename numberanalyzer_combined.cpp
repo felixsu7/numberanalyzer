@@ -247,6 +247,7 @@ struct EvaluationError {
   size_t pos;
   std::string message;
   std::string offending;
+  std::string expr;
 };
 
 using EvaluationResult = std::variant<double, EvaluationError>;
@@ -450,8 +451,8 @@ std::pair<std::string, std::string> consume_front_string(const std::string s);
 int smart_find_index(const std::vector<std::string> items,
                      const std::string key);
 
-bool is_error(EvaluationResult res);
-bool handle_error(EvaluationResult *res);
+bool is_eval_error(EvaluationResult res);
+bool handle_eval_error(EvaluationResult *res, bool report_expr);
 
 #include <cerrno>
 #include <cstdlib>
@@ -477,7 +478,8 @@ int main() {
   std::string user_input;
 
   while (state.running) {
-    // We place the check here because /exact also does analysis
+    // We place the check here because /exact also does analysis and that goes a
+    // different route.
     if (state.done_analysis && !state.auto_repeat) {
       while (true) {
         std::cout << style_output_secondary(
@@ -552,13 +554,11 @@ int main() {
 
     // Not a command, so we continue on expressions
     auto res = evaluate_expression(user_input, state.user_constants);
-    if (handle_error(&res))
+    if (handle_eval_error(&res, false))
       continue;
 
-    // TODO support exact ints
-
     auto evaled = std::get<double>(res);
-    std::cout << style_info("Evaluator output: ")
+    std::cout << style_info("Evaluator output:") << " "
               << style_output_secondary(std::to_string(evaled)) << std::endl;
     if (!fits_long(evaled)) {
       std::cout << style_error("ERROR: " + std::to_string(evaled) +
@@ -567,7 +567,7 @@ int main() {
       continue;
     }
     auto as_int = static_cast<int64_t>(evaled);
-    std::cout << style_info("As integer: ")
+    std::cout << style_info("As integer:") << " "
               << style_output_secondary(std::to_string(as_int)) << std::endl;
 
     state.user_constants["ans"] = evaled;
@@ -855,7 +855,7 @@ CommandResult cmd_define_constant(const std::string input,
   }
 
   auto res = evaluate_expression(consumed.second, state->user_constants);
-  if (handle_error(&res))
+  if (handle_eval_error(&res, false))
     return CommandResult::FAILURE;
   auto val = std::get<double>(res);
 
@@ -893,8 +893,8 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
   int64_t exact = std::strtoll(input.c_str(), &end, 10);
   if (end == input.c_str()) {
     auto err = static_cast<EvaluationResult>(
-        EvaluationError{0, "Expected number", ""});
-    handle_error(&err);
+        EvaluationError{0, "Expected number", "", ""});
+    handle_eval_error(&err, false);
     return CommandResult::FAILURE;
   }
 
@@ -1066,18 +1066,24 @@ void analysis_divisbility(int64_t num) {
   };
 
   if (SECONDARY_INPUTS.empty()) {
-    cout << "ERROR: No secondary inputs set." << endl;
+    cout << "ERROR: No selected integers set." << endl;
     return;
   }
+
+  bool at_least_one = false;
 
   cout << num << " is divisible by ";
   for (auto d : SECONDARY_INPUTS) {
     if (d == 0)
       continue;
     if (num % d == 0) {
+      at_least_one = true;
       cout << d << ", ";
     }
   }
+
+  if (!at_least_one)
+    cout << "none of the selected integers.";
 
   cout << endl;
 }
@@ -1404,8 +1410,9 @@ void handle_secondary_input_dialogue(ProgramState *state) {
       << style_info(
              "Since the Divisibility analysis function is enabled, please "
              "input "
-             "secondary integers to be tested against; seperated by space. "
-             "Type "
+             "selected integers to be tested against; separated by semicolons "
+             "(';'). "
+             "Type in exactly"
              "'q' to not input anything.")
       << std::endl;
 
@@ -1422,24 +1429,38 @@ void handle_secondary_input_dialogue(ProgramState *state) {
     user_input = lower_case_string(trim_string(user_input));
     if (user_input.empty())
       continue;
-    if (user_input[0] == 'q') {
-      std::cout << style_output_primary("No secondary inputs set, continuing.")
+    if (user_input == "q") {
+      std::cout << style_output_primary("No selected integers set, continuing.")
                 << std::endl;
       break;
     }
 
     std::vector<int64_t> collected;
-    // basically, we are very forgiving, ignoring garbage.
-    while (!user_input.empty()) {
-      char *end;
-      int64_t num = std::strtoll(user_input.c_str(), &end, 10);
-      if (end == user_input.c_str()) {
-        if (!user_input.empty())
-          user_input.erase(0, 1);
+    std::string expr;
+    while (!user_input.empty() || !expr.empty()) {
+      while (!user_input.empty() && user_input[0] != ';') {
+        expr.push_back(user_input[0]);
+        user_input.erase(0, 1);
+      }
+      if (!user_input.empty() && user_input[0] == ';') {
+        user_input.erase(0, 1);
+      }
+
+      auto res = evaluate_expression(expr, state->user_constants);
+      expr = "";
+      if (handle_eval_error(&res, true))
+        continue;
+
+      auto evaled = std::get<double>(res);
+      if (!fits_long(evaled)) {
+        std::cout << style_error("ERROR: " + std::to_string(evaled) +
+                                 " is too large to be analyzed!")
+                  << std::endl;
         continue;
       }
-      collected.push_back(num);
-      user_input.erase(0, static_cast<size_t>(end - user_input.c_str()) + 1);
+      auto as_int = static_cast<int64_t>(evaled);
+
+      collected.push_back(as_int);
     }
 
     if (collected.empty()) {
@@ -1447,6 +1468,16 @@ void handle_secondary_input_dialogue(ProgramState *state) {
                                "stop immediately.")
                 << std::endl;
       continue;
+    } else {
+      std::cout << style_info("Selected Integers:") << " ";
+      bool first = true;
+      for (auto si : collected) {
+        if (!first)
+          std::cout << ", ";
+        first = false;
+        std::cout << style_input_secondary(std::to_string(si));
+      }
+      std::cout << std::endl;
     }
 
     state->secondary_inputs = collected;
@@ -1457,6 +1488,8 @@ void handle_secondary_input_dialogue(ProgramState *state) {
 
 #include <cstdlib>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 
 // Based on https://nicolovaligi.com/articles/precedence-climbing
@@ -1487,7 +1520,7 @@ class Evaluator {
 
   EvaluationResult expression(int min) {
     auto left_res = primary();
-    if (is_error(left_res))
+    if (is_eval_error(left_res))
       return left_res;
     auto left = std::get<double>(left_res);
 
@@ -1501,7 +1534,7 @@ class Evaluator {
       // Exponentation is the only right-associative operator we have, so
       // ternary is fine.
       auto right_res = expression(op == '^' ? pr : pr + 1);
-      if (is_error(right_res))
+      if (is_eval_error(right_res))
         return right_res;
       auto right = std::get<double>(right_res);
 
@@ -1517,7 +1550,7 @@ class Evaluator {
         break;
       case '/':
         if (right == 0)
-          return EvaluationError{op_pos, "Division by zero", "0"};
+          return EvaluationError{op_pos, "Division by zero", "0", ""};
         left /= right;
         break;
       case '^':
@@ -1533,11 +1566,11 @@ class Evaluator {
     if (c == '(') {
       pos++;
       auto sub_res = expression(1);
-      if (is_error(sub_res))
+      if (is_eval_error(sub_res))
         return sub_res;
 
       if (!consume(')')) {
-        return EvaluationError{pos, "Missing ending parenthesis", ")"};
+        return EvaluationError{pos, "Missing ending parenthesis", ")", ""};
       };
 
       return std::get<double>(sub_res);
@@ -1555,26 +1588,26 @@ class Evaluator {
         if (peek() != ')')
           do {
             auto arg_res = expression(1);
-            if (is_error(arg_res))
+            if (is_eval_error(arg_res))
               return arg_res;
             args.push_back(std::get<double>(arg_res));
           } while (peek() == ',' && pos++);
         if (!consume(')')) {
-          return EvaluationError{pos, "Missing ending parenthesis", ")"};
+          return EvaluationError{pos, "Missing ending parenthesis", ")", ""};
         };
 
         auto it = math_funcs.find(id);
         if (it == math_funcs.end())
-          return EvaluationError{start, "Unknown function", id};
+          return EvaluationError{start, "Unknown function", id, ""};
 
         if (args.size() != it->second.arity)
           return EvaluationError{
               start, "Function " + id + " got wrong amount of arguments",
-              std::to_string(args.size())};
+              std::to_string(args.size()), ""};
 
         double val = it->second.func(args);
         if (!std::isfinite(val))
-          return EvaluationError{start, "Function domain error", id};
+          return EvaluationError{start, "Function domain error", id, ""};
 
         return val;
       } else {
@@ -1582,14 +1615,14 @@ class Evaluator {
         // TODO take in a map of consts
         auto it = user_constants.find(id);
         if (it == user_constants.end())
-          return EvaluationError{start, "Unknown constant", id};
+          return EvaluationError{start, "Unknown constant", id, ""};
         return it->second;
       }
     }
 
     if (consume('-')) {
       auto neg_res = expression(4);
-      if (is_error(neg_res))
+      if (is_eval_error(neg_res))
         return neg_res;
       return -std::get<double>(neg_res);
     }
@@ -1598,7 +1631,7 @@ class Evaluator {
     char *end;
     double decimal = std::strtod(source.c_str() + pos, &end);
     if (end == source.c_str() + pos)
-      return EvaluationError{pos, "Expected number", ""};
+      return EvaluationError{pos, "Expected number", "", ""};
 
     // Moves to position after last digit
     pos = static_cast<size_t>(end - source.c_str());
@@ -1630,7 +1663,13 @@ public:
     // Must consume all.
     if (peek() != '\0')
       return EvaluationError{pos, "Unexpected character",
-                             std::string(1, source[pos])};
+                             std::string(1, source[pos]), expr};
+
+    // na para bang christmas gift
+    if (auto err = std::get_if<EvaluationError>(&res)) {
+      err->expr = expr;
+      res = *err;
+    }
 
     return res;
   }
@@ -2369,8 +2408,14 @@ std::pair<std::string, std::string> consume_front_string(const std::string s) {
 
 // Returns the index into items of the closest match to the key.
 // Returns -1 if not found, or -2 if found two or more matches.
+// Not really smart, but it works well.
 int smart_find_index(const std::vector<std::string> items,
                      const std::string key) {
+  // if exact match was found, return that immediately.
+  if (auto it = std::find(items.begin(), items.end(), key); it != items.end()) {
+    return static_cast<int>(std::distance(items.begin(), it));
+  }
+
   auto transformed_key = lower_case_string(key);
   // Remove every whitespace
   for (size_t i = 0; i < transformed_key.size(); i++) {
@@ -2422,14 +2467,19 @@ int smart_find_index(const std::vector<std::string> items,
   return match_idx;
 }
 
-bool is_error(EvaluationResult res) {
+bool is_eval_error(EvaluationResult res) {
   return std::holds_alternative<EvaluationError>(res);
 }
 
-bool handle_error(EvaluationResult *res) {
+bool handle_eval_error(EvaluationResult *res, bool report_expr) {
   if (auto err = std::get_if<EvaluationError>(res)) {
+    std::string expr_report;
+    if (report_expr) {
+      expr_report = " ('" + err->expr + "')";
+    }
     std::cout << style_error("ERROR: " + err->message + " (" + err->offending +
-                             ") at position " + std::to_string(err->pos) + ".")
+                             ") at position " + std::to_string(err->pos) + "." +
+                             expr_report)
               << std::endl;
     return true;
   }

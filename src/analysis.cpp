@@ -43,18 +43,24 @@ void analysis_divisbility(int64_t num) {
   };
 
   if (SECONDARY_INPUTS.empty()) {
-    cout << "ERROR: No secondary inputs set." << endl;
+    cout << "ERROR: No selected integers set." << endl;
     return;
   }
+
+  bool at_least_one = false;
 
   cout << num << " is divisible by ";
   for (auto d : SECONDARY_INPUTS) {
     if (d == 0)
       continue;
     if (num % d == 0) {
+      at_least_one = true;
       cout << d << ", ";
     }
   }
+
+  if (!at_least_one)
+    cout << "none of the selected integers.";
 
   cout << endl;
 }
@@ -381,8 +387,9 @@ void handle_secondary_input_dialogue(ProgramState *state) {
       << style_info(
              "Since the Divisibility analysis function is enabled, please "
              "input "
-             "secondary integers to be tested against; seperated by space. "
-             "Type "
+             "selected integers to be tested against; separated by semicolons "
+             "(';'). "
+             "Type in exactly"
              "'q' to not input anything.")
       << std::endl;
 
@@ -399,24 +406,38 @@ void handle_secondary_input_dialogue(ProgramState *state) {
     user_input = lower_case_string(trim_string(user_input));
     if (user_input.empty())
       continue;
-    if (user_input[0] == 'q') {
-      std::cout << style_output_primary("No secondary inputs set, continuing.")
+    if (user_input == "q") {
+      std::cout << style_output_primary("No selected integers set, continuing.")
                 << std::endl;
       break;
     }
 
     std::vector<int64_t> collected;
-    // basically, we are very forgiving, ignoring garbage.
-    while (!user_input.empty()) {
-      char *end;
-      int64_t num = std::strtoll(user_input.c_str(), &end, 10);
-      if (end == user_input.c_str()) {
-        if (!user_input.empty())
-          user_input.erase(0, 1);
+    std::string expr;
+    while (!user_input.empty() || !expr.empty()) {
+      while (!user_input.empty() && user_input[0] != ';') {
+        expr.push_back(user_input[0]);
+        user_input.erase(0, 1);
+      }
+      if (!user_input.empty() && user_input[0] == ';') {
+        user_input.erase(0, 1);
+      }
+
+      auto res = evaluate_expression(expr, state->user_constants);
+      expr = "";
+      if (handle_eval_error(&res, true))
+        continue;
+
+      auto evaled = std::get<double>(res);
+      if (!fits_long(evaled)) {
+        std::cout << style_error("ERROR: " + std::to_string(evaled) +
+                                 " is too large to be analyzed!")
+                  << std::endl;
         continue;
       }
-      collected.push_back(num);
-      user_input.erase(0, static_cast<size_t>(end - user_input.c_str()) + 1);
+      auto as_int = static_cast<int64_t>(evaled);
+
+      collected.push_back(as_int);
     }
 
     if (collected.empty()) {
@@ -424,6 +445,16 @@ void handle_secondary_input_dialogue(ProgramState *state) {
                                "stop immediately.")
                 << std::endl;
       continue;
+    } else {
+      std::cout << style_info("Selected Integers:") << " ";
+      bool first = true;
+      for (auto si : collected) {
+        if (!first)
+          std::cout << ", ";
+        first = false;
+        std::cout << style_input_secondary(std::to_string(si));
+      }
+      std::cout << std::endl;
     }
 
     state->secondary_inputs = collected;

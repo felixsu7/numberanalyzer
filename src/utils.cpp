@@ -63,8 +63,14 @@ std::pair<std::string, std::string> consume_front_string(const std::string s) {
 
 // Returns the index into items of the closest match to the key.
 // Returns -1 if not found, or -2 if found two or more matches.
+// Not really smart, but it works well.
 int smart_find_index(const std::vector<std::string> items,
                      const std::string key) {
+  // if exact match was found, return that immediately.
+  if (auto it = std::find(items.begin(), items.end(), key); it != items.end()) {
+    return static_cast<int>(std::distance(items.begin(), it));
+  }
+
   auto transformed_key = lower_case_string(key);
   // Remove every whitespace
   for (size_t i = 0; i < transformed_key.size(); i++) {
@@ -116,14 +122,19 @@ int smart_find_index(const std::vector<std::string> items,
   return match_idx;
 }
 
-bool is_error(EvaluationResult res) {
+bool is_eval_error(EvaluationResult res) {
   return std::holds_alternative<EvaluationError>(res);
 }
 
-bool handle_error(EvaluationResult *res) {
+bool handle_eval_error(EvaluationResult *res, bool report_expr) {
   if (auto err = std::get_if<EvaluationError>(res)) {
+    std::string expr_report;
+    if (report_expr) {
+      expr_report = " ('" + err->expr + "')";
+    }
     std::cout << style_error("ERROR: " + err->message + " (" + err->offending +
-                             ") at position " + std::to_string(err->pos) + ".")
+                             ") at position " + std::to_string(err->pos) + "." +
+                             expr_report)
               << std::endl;
     return true;
   }

@@ -29,7 +29,8 @@ int main() {
   std::string user_input;
 
   while (state.running) {
-    // We place the check here because /exact also does analysis
+    // We place the check here because /exact also does analysis and that goes a
+    // different route.
     if (state.done_analysis && !state.auto_repeat) {
       while (true) {
         std::cout << style_output_secondary(
@@ -104,13 +105,11 @@ int main() {
 
     // Not a command, so we continue on expressions
     auto res = evaluate_expression(user_input, state.user_constants);
-    if (handle_error(&res))
+    if (handle_eval_error(&res, false))
       continue;
 
-    // TODO support exact ints
-
     auto evaled = std::get<double>(res);
-    std::cout << style_info("Evaluator output: ")
+    std::cout << style_info("Evaluator output:") << " "
               << style_output_secondary(std::to_string(evaled)) << std::endl;
     if (!fits_long(evaled)) {
       std::cout << style_error("ERROR: " + std::to_string(evaled) +
@@ -119,7 +118,7 @@ int main() {
       continue;
     }
     auto as_int = static_cast<int64_t>(evaled);
-    std::cout << style_info("As integer: ")
+    std::cout << style_info("As integer:") << " "
               << style_output_secondary(std::to_string(as_int)) << std::endl;
 
     state.user_constants["ans"] = evaled;
