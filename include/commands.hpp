@@ -17,7 +17,7 @@ enum class CommandResult {
 struct ProgramState {
   bool running;
   std::map<std::string, bool> enabled;
-  std::map<std::string, long double> user_constants;
+  std::map<std::string, double> user_constants;
 };
 
 using CommandFuncDef = CommandResult(const std::string, ProgramState *);
@@ -37,6 +37,8 @@ CommandFuncDef cmd_only;
 CommandFuncDef cmd_enable_all;
 CommandFuncDef cmd_define_constant;
 CommandFuncDef cmd_undefine_constant;
+CommandFuncDef cmd_exact_input;
+CommandFuncDef cmd_history;
 
 static const std::map<std::string, CommandDef> cmd_funcs = {
     {"info",
@@ -44,20 +46,27 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
       ""}},
     {"quit", {cmd_quit, "Exits the program.", ""}},
     {"enable",
-     {cmd_enable, "Enables the analysis function matching the input.", ""}},
+     {cmd_enable, "Enables the analysis function matching the input.", "ev"}},
     {"disable",
-     {cmd_disable, "Disables the analysis function matching the input.", ""}},
+     {cmd_disable, "Disables the analysis function matching the input.",
+      "pos"}},
     {"toggle",
-     {cmd_toggle, "Toggles the analysis function matching the input.", ""}},
+     {cmd_toggle, "Toggles the analysis function matching the input.", "sum"}},
     {"only",
      {cmd_only,
       "Enables only the analysis function matching the input; disabling "
       "anything else.",
-      ""}},
+      "factor"}},
     {"enableall",
      {cmd_enable_all, "Enables all of the analysis functions.", ""}},
-    {"def", {cmd_define_constant, "(Re)defines a constant to be used.", ""}},
-    {"undef", {cmd_undefine_constant, "Undefines an existing constant.", ""}},
-};
+    {"def",
+     {cmd_define_constant, "(Re)defines a constant to be used.",
+      "phi (1 + sqrt(5))/2"}},
+    {"undef", {cmd_undefine_constant, "Undefines an existing constant.", "pi"}},
+    {"exact",
+     {cmd_exact_input, "Analyzes an exact integer; has better precision.",
+      "-9223372036854775808"}},
+    {"history",
+     {cmd_history, "Views past analyzed numbers during this session.", ""}}};
 
 CommandResult execute_command(const std::string input, ProgramState *state);

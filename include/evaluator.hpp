@@ -6,11 +6,11 @@
 #include <variant>
 #include <vector>
 
-using MathFuncArgs = const std::vector<long double> &;
+using MathFuncArgs = const std::vector<double> &;
 
 struct MathFuncDef {
   size_t arity;
-  std::function<long double(MathFuncArgs)> func;
+  std::function<double(MathFuncArgs)> func;
 };
 
 static const std::map<std::string, MathFuncDef> math_funcs{
@@ -46,7 +46,7 @@ static const std::map<std::string, MathFuncDef> math_funcs{
      {0,
       [](MathFuncArgs _) {
         std::mt19937_64 rng{std::random_device{}()};
-        std::uniform_real_distribution<long double> dist(0.0L, 1.0L);
+        std::uniform_real_distribution<double> dist(0.0L, 1.0L);
 
         return dist(rng);
       }}},
@@ -54,7 +54,7 @@ static const std::map<std::string, MathFuncDef> math_funcs{
      {2,
       [](MathFuncArgs a) {
         std::mt19937_64 rng{std::random_device{}()};
-        std::uniform_real_distribution<long double> dist(a[0], a[1]);
+        std::uniform_real_distribution<double> dist(a[0], a[1]);
 
         return dist(rng);
       }}},
@@ -63,7 +63,7 @@ static const std::map<std::string, MathFuncDef> math_funcs{
      {2,
       [](MathFuncArgs a) {
         std::mt19937_64 rng{std::random_device{}()};
-        std::uniform_real_distribution<long double> dist(a[0], a[1]);
+        std::uniform_real_distribution<double> dist(a[0], a[1]);
 
         return std::ceil(dist(rng));
       }}},
@@ -71,7 +71,7 @@ static const std::map<std::string, MathFuncDef> math_funcs{
 };
 
 // https://en.wikipedia.org/wiki/List_of_mathematical_constants
-static const std::map<std::string, long double> default_math_consts{
+static const std::map<std::string, double> default_math_consts{
     {"ans", 0},
     {"pi", 3.14159265358979323846},
     {"e", 2.71828182845904523536},
@@ -87,9 +87,8 @@ struct EvaluationError {
   std::string offending;
 };
 
-using EvaluationResult = std::variant<long double, EvaluationError>;
+using EvaluationResult = std::variant<double, EvaluationError>;
 
 EvaluationResult
 evaluate_expression(const std::string expr,
-                    const std::map<std::string, long double> user_constants);
-bool is_error(EvaluationResult res);
+                    const std::map<std::string, double> user_constants);

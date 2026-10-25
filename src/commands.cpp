@@ -1,44 +1,60 @@
 #include "commands.hpp"
 #include "analysis.hpp"
 #include "evaluator.hpp"
+#include "styling.hpp"
+#include "utils.hpp"
 #include <iostream>
-#include <variant>
 
 CommandResult cmd_info(const std::string _, ProgramState *state) {
-  std::cout << "Here are available analysis functions, commands, functions and "
-               "constants:"
-            << std::endl;
+  std::cout
+      << style_info(
+             "Here are available analysis functions, commands, functions and "
+             "constants:")
+      << std::endl;
 
-  std::cout << std::endl << "Analysis functions: " << std::endl;
-  for (size_t i = 0; i < analysis_funcs_order.size(); i++) {
-    auto name = analysis_funcs_order[i];
-    std::cout << " - " << name << (state->enabled[name] ? "" : " (Disabled)");
-    // last index
-    if (i != analysis_funcs_order.size() - 1) {
-      std::cout << std::endl;
-    }
+  std::cout << std::endl << style_info("Analysis functions: ") << std::endl;
+  for (auto af : analysis_funcs_order) {
+    std::cout << " - " << (state->enabled[af] ? af : style_strikethrough(af))
+              << (state->enabled[af] ? "" : " (Disabled)") << std::endl;
   }
 
-  std::cout << std::endl << std::endl << "Commands: " << std::endl;
-  for (auto [name, def] : cmd_funcs) {
-    std::cout << " - /" << name << ": " << def.desc << std::endl;
+  std::cout << std::endl << style_info("Commands: ") << std::endl;
+  for (auto [cf, def] : cmd_funcs) {
+    std::cout << " - /" << style_bold(cf) << ": " << style_italic(def.desc)
+              << std::endl;
     if (!def.example.empty()) {
-      std::cout << "    Example: /" << name << " " << def.example << std::endl;
+      std::cout << style_italic("    Example: /" + cf + " " + def.example)
+                << std::endl;
     }
   }
 
-  std::cout << std::endl
-            << "Functions (numbers inside indicate the amount of arguments it "
-               "takes):";
+  std::cout << std::endl << style_info("Functions:");
 
-  for (auto [name, def] : math_funcs) {
-    std::cout << " " << name << "(" << def.arity << ")";
+  bool first = true;
+  for (auto [mf, def] : math_funcs) {
+    if (!first)
+      std::cout << ", ";
+    first = false;
+
+    std::string args;
+    bool first_arg = true;
+    for (char i = 0; i < def.arity; i++) {
+      if (!first_arg)
+        args += ", ";
+      first_arg = false;
+      args.push_back('x' + i);
+    }
+    std::cout << style_bold(mf + "(" + args + ")");
   }
 
-  std::cout << std::endl << std::endl << "Constants:";
+  std::cout << std::endl << std::endl << style_info("Constants: ");
 
-  for (auto [name, val] : state->user_constants) {
-    std::cout << " " << name << ": " << val << ";";
+  first = true;
+  for (auto [uc, val] : state->user_constants) {
+    if (!first)
+      std::cout << "; ";
+    first = false;
+    std::cout << style_bold(uc + ": " + std::to_string(val));
   }
 
   std::cout << std::endl;
@@ -46,76 +62,33 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
   return CommandResult::SUCCESS;
 }
 
-std::string lower_case_string(const std::string s) {
-  std::string res = s;
-  std::transform(res.begin(), res.end(), res.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
-  return res;
-}
-
-// Returns the index into items of the closest match to the key.
-// Returns -1 if not found, or -2 if found two or more matches.
-int smart_find_index(const std::vector<std::string> items,
-                     const std::string key) {
-  auto lowered_key = lower_case_string(key);
-  while (lowered_key[0] == ' ')
-    lowered_key.erase(0, 1);
-  auto lowered_items = items;
-  std::transform(lowered_items.begin(), lowered_items.end(),
-                 lowered_items.begin(),
-                 [](const std::string s) { return lower_case_string(s); });
-
-  std::string current_key;
-  size_t key_idx = 0;
-  int match_idx = -1;
-  bool match = false;
-
-  while (!match && key_idx < key.size()) {
-    current_key.push_back(lowered_key[key_idx++]);
-    match_idx = -1;
-    match = false;
-
-    for (size_t i = 0; i < lowered_items.size(); i++) {
-      // is current_key a prefix of i?
-      auto res = std::mismatch(current_key.begin(), current_key.end(),
-                               lowered_items[i].begin());
-
-      if (res.first == current_key.end()) {
-        if (!match) {
-          match = true;
-          match_idx = static_cast<int>(i);
-        } else {
-          match = false;
-          match_idx = -2;
-          break;
-        }
-      }
-    }
-  }
-
-  return match_idx;
-}
-
+// Handles invalid inputs, returns empty string if either key doesnt exist or
+// ambigious.
 std::string input_helper(const std::vector<std::string> items,
                          const std::string key, const std::string what) {
-  auto idx = smart_find_index(items, key);
-  if (idx < 0) {
+  auto trimmed_key = trim_string(key);
+  if (trimmed_key.empty()) {
+    std::cout << style_error("ERROR: Missing required input.") << std::endl;
     return "";
   }
 
+  auto idx = smart_find_index(items, trimmed_key);
+
   if (idx == -1) {
-    std::cout << "ERROR: Input does not match any known " << what << "."
+    std::cout << style_error("ERROR: Input '" + trimmed_key +
+                             "' does not match any known " + what + ".")
               << std::endl;
     return "";
   }
   if (idx == -2) {
-    std::cout << "ERROR: Input matches two or more known " << what
-              << ", please narrow the input down." << std::endl;
+    std::cout << style_error("ERROR: Input '" + trimmed_key +
+                             "' matches two or more known " + what +
+                             ", please narrow the input down.")
+              << std::endl;
     return "";
   }
 
   return items[static_cast<size_t>(idx)];
-  ;
 }
 
 CommandResult cmd_quit(const std::string _, ProgramState *state) {
@@ -124,80 +97,77 @@ CommandResult cmd_quit(const std::string _, ProgramState *state) {
 }
 
 CommandResult cmd_enable(const std::string input, ProgramState *state) {
-  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
-  if (name.empty())
+  auto af = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (af.empty())
     return CommandResult::FAILURE;
-  state->enabled[name] = true;
+  state->enabled[af] = true;
 
-  std::cout << "Enabled analysis function: " << name << std::endl;
+  std::cout << style_output_primary("Enabled analysis function: " + af)
+            << std::endl;
 
   return CommandResult::SUCCESS;
 }
 
 CommandResult cmd_disable(const std::string input, ProgramState *state) {
-  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
-  if (name.empty())
+  auto af = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (af.empty())
     return CommandResult::FAILURE;
 
-  state->enabled[name] = false;
+  state->enabled[af] = false;
 
-  std::cout << "Disable analysis function: " << name << std::endl;
+  std::cout << style_output_primary("Disabled analysis function: " + af)
+            << std::endl;
 
   return CommandResult::SUCCESS;
 }
 
 CommandResult cmd_toggle(const std::string input, ProgramState *state) {
-  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
-  if (name.empty())
+  auto af = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (af.empty())
     return CommandResult::FAILURE;
 
-  state->enabled[name] = !state->enabled[name];
+  state->enabled[af] = !state->enabled[af];
 
-  std::cout << (state->enabled[name] ? "Enabled" : "Disabled")
-            << " analysis function: " << name << std::endl;
+  auto af_state = std::string(state->enabled[af] ? "Enabled" : "Disabled");
+
+  std::cout << style_output_primary(af_state + " analysis function: " + af)
+            << std::endl;
 
   return CommandResult::SUCCESS;
 }
 
 CommandResult cmd_only(const std::string input, ProgramState *state) {
-  auto name = input_helper(analysis_funcs_order, input, "analysis functions");
-  if (name.empty())
+  auto af = input_helper(analysis_funcs_order, input, "analysis functions");
+  if (af.empty())
     return CommandResult::FAILURE;
 
-  for (auto f : analysis_funcs_order) {
-    state->enabled[f] = false;
+  for (auto inner_af : analysis_funcs_order) {
+    state->enabled[inner_af] = false;
   }
 
-  state->enabled[name] = true;
+  state->enabled[af] = true;
 
-  std::cout << "Only enabled analysis function: " << name << std::endl;
+  std::cout << style_output_primary("Only enabled analysis function: " + af)
+            << std::endl;
 
   return CommandResult::SUCCESS;
 }
 
 CommandResult cmd_enable_all(const std::string _, ProgramState *state) {
-  for (auto f : analysis_funcs_order) {
-    state->enabled[f] = true;
+  for (auto af : analysis_funcs_order) {
+    state->enabled[af] = true;
   }
 
-  std::cout << "Enabled all analysis functions!" << std::endl;
+  std::cout << style_output_primary("Enabled all analysis functions!")
+            << std::endl;
 
   return CommandResult::SUCCESS;
 }
 
-static bool is_num(char c) { return c >= '0' && c <= '9'; }
-static bool is_alpha(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-static bool is_whitespace(char c) {
-  return (c == ' ') || (c == '\n') || (c == '\t');
-}
-static bool is_alphanum(char c) { return is_num(c) || is_alpha(c); }
-
 CommandResult cmd_define_constant(const std::string input,
                                   ProgramState *state) {
   if (input.empty()) {
-    std::cout << "ERROR: Missing name!" << std::endl;
+    std::cout << style_error("ERROR: Missing constant name!") << std::endl;
     return CommandResult::FAILURE;
   }
 
@@ -208,34 +178,25 @@ CommandResult cmd_define_constant(const std::string input,
   auto name = remaining_input.substr(0, i);
   remaining_input.erase(0, i);
 
-  while (is_whitespace(input[0]))
-    remaining_input.erase(0, 1);
-
+  remaining_input = trim_string(remaining_input);
   if (remaining_input.empty()) {
-    std::cout << "ERROR: Missing expression!" << std::endl;
+    std::cout << style_error("ERROR: Missing expression!") << std::endl;
     return CommandResult::FAILURE;
   }
 
-  auto evaluation = evaluate_expression(remaining_input, state->user_constants);
-
-  if (std::holds_alternative<EvaluationError>(evaluation)) {
-    auto err = std::get<EvaluationError>(evaluation);
-
-    std::cout << "ERROR: " << err.message << " (" << err.offending
-              << ") at position " << err.pos << std::endl;
-
+  auto res = evaluate_expression(remaining_input, state->user_constants);
+  if (handle_error(&res))
     return CommandResult::FAILURE;
-  }
-
-  auto val = std::get<long double>(evaluation);
+  auto val = std::get<double>(res);
 
   auto already_exists =
       state->user_constants.find(name) != state->user_constants.end();
+  auto def_msg = std::string(already_exists ? "Redefined" : "Defined");
 
   state->user_constants[name] = val;
 
-  std::cout << (already_exists ? "Redefined" : "Defined") << " " << name
-            << " as " << val;
+  std::cout << style_output_primary(def_msg + " " + name + " as " +
+                                    std::to_string(val));
 
   return CommandResult::SUCCESS;
 }
@@ -252,10 +213,13 @@ CommandResult cmd_undefine_constant(const std::string input,
 
   state->user_constants.erase(name);
 
-  std::cout << "Undefined constant: " << name << std::endl;
+  std::cout << style_output_primary("Undefined constant: " + name) << std::endl;
 
   return CommandResult::SUCCESS;
 }
+
+CommandResult cmd_exact_input(const std::string input, ProgramState *state) {}
+CommandResult cmd_history(const std::string input, ProgramState *state) {}
 
 CommandResult execute_command(const std::string input, ProgramState *state) {
   std::string remaining_input = input;

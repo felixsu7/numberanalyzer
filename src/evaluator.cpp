@@ -1,29 +1,20 @@
 #include "evaluator.hpp"
+#include "utils.hpp"
 #include <cctype>
 #include <cmath>
 #include <cstdlib>
-#include <functional>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
-#include <variant>
 #include <vector>
 
 // Based on https://nicolovaligi.com/articles/precedence-climbing
 // Also https://craftinginterpreters.com/parsing-expressions.html
 // Instead of an AST though, we immediately evaluate.
-// Also, it's a long double first since trig functions would otherwise just
+// Also, it's a double first since trig functions would otherwise just
 // return 0 almost always.
-
-static bool is_num(char c) { return c >= '0' && c <= '9'; }
-static bool is_alpha(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-static bool is_whitespace(char c) {
-  return (c == ' ') || (c == '\n') || (c == '\t');
-}
-static bool is_alphanum(char c) { return is_num(c) || is_alpha(c); }
+// We could use long doubles, but now that isn't portable.
 
 int prec(char c) {
   switch (c) {
@@ -40,10 +31,6 @@ int prec(char c) {
   }
 }
 
-bool is_error(EvaluationResult res) {
-  return std::holds_alternative<EvaluationError>(res);
-}
-
 class Evaluator {
   std::string source;
   size_t pos = 0;
@@ -52,7 +39,7 @@ class Evaluator {
     auto left_res = primary();
     if (is_error(left_res))
       return left_res;
-    auto left = std::get<long double>(left_res);
+    auto left = std::get<double>(left_res);
 
     while (true) {
       char op = peek();
@@ -66,7 +53,7 @@ class Evaluator {
       auto right_res = expression(op == '^' ? pr : pr + 1);
       if (is_error(right_res))
         return right_res;
-      auto right = std::get<long double>(right_res);
+      auto right = std::get<double>(right_res);
 
       switch (op) {
       case '+':
@@ -103,7 +90,7 @@ class Evaluator {
         return EvaluationError{pos, "Missing ending parenthesis", ")"};
       };
 
-      return std::get<long double>(sub_res);
+      return std::get<double>(sub_res);
     }
 
     if (is_alpha(c)) {
@@ -114,13 +101,13 @@ class Evaluator {
 
       if (consume('(')) {
         // Functions
-        std::vector<long double> args;
+        std::vector<double> args;
         if (peek() != ')')
           do {
             auto arg_res = expression(1);
             if (is_error(arg_res))
               return arg_res;
-            args.push_back(std::get<long double>(arg_res));
+            args.push_back(std::get<double>(arg_res));
           } while (peek() == ',' && pos++);
         if (!consume(')')) {
           return EvaluationError{pos, "Missing ending parenthesis", ")"};
@@ -135,7 +122,7 @@ class Evaluator {
               start, "Function " + id + " got wrong amount of arguments",
               std::to_string(args.size())};
 
-        long double val = it->second.func(args);
+        double val = it->second.func(args);
         if (!std::isfinite(val))
           return EvaluationError{start, "Function domain error", id};
 
@@ -154,12 +141,12 @@ class Evaluator {
       auto neg_res = expression(4);
       if (is_error(neg_res))
         return neg_res;
-      return -std::get<long double>(neg_res);
+      return -std::get<double>(neg_res);
     }
 
     // Integers, decimals, and somehow hexidecimals for free.
     char *end;
-    long double decimal = std::strtold(source.c_str() + pos, &end);
+    double decimal = std::strtod(source.c_str() + pos, &end);
     if (end == source.c_str() + pos)
       return EvaluationError{pos, "Expected number", ""};
 
@@ -184,7 +171,7 @@ class Evaluator {
   }
 
 public:
-  std::map<std::string, long double> user_constants;
+  std::map<std::string, double> user_constants;
   EvaluationResult evaluate_expression(std::string expr) {
     source = expr;
     pos = 0;
@@ -201,7 +188,7 @@ public:
 
 EvaluationResult
 evaluate_expression(std::string expr,
-                    std::map<std::string, long double> user_constants) {
+                    std::map<std::string, double> user_constants) {
   Evaluator p;
   p.user_constants = user_constants;
   return p.evaluate_expression(expr);
