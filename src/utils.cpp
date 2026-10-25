@@ -104,7 +104,7 @@ int smart_find_index(const std::vector<std::string> items,
           match = true;
           match_idx = static_cast<int>(i);
         } else {
-          // second+ match, ambigious
+          // second+ match, ambiguous
           match = false;
           match_idx = -2;
           break;

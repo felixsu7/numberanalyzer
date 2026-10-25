@@ -20,6 +20,7 @@ int main() {
   auto state = ProgramState{};
   state.running = true;
   state.auto_repeat = false;
+  state.done_analysis = false;
   state.user_constants = default_math_consts;
   for (auto f : analysis_funcs_order) {
     state.enabled_analysis[f] = true;
@@ -28,6 +29,35 @@ int main() {
   std::string user_input;
 
   while (state.running) {
+    // We place the check here because /exact also does analysis
+    if (state.done_analysis && !state.auto_repeat) {
+      while (true) {
+        std::cout << style_output_secondary(
+                         "Do you want to analyze another number? (y/n)")
+                  << std::endl;
+        std::cout << style_input_secondary("> ");
+        std::getline(std::cin, user_input);
+        user_input = lower_case_string(trim_string(user_input));
+
+        if (user_input.empty())
+          continue;
+        if (user_input[0] == 'y') {
+          state.done_analysis = false;
+          break;
+        } else if (user_input[0] == 'n') {
+          state.running = false;
+          break;
+        } else {
+          std::cout << style_error("Please type in only either 'y' or 'n'.")
+                    << std::endl;
+          continue;
+        }
+      }
+      continue;
+    }
+
+    state.done_analysis = false;
+
     std::cout
         << std::endl
         << style_italic(
@@ -56,7 +86,7 @@ int main() {
       break;
     } else if (cmd_res == CommandResult::MISSING_COMMAND) {
     } else if (cmd_res == CommandResult::INVALID_COMMAND) {
-    } else if (cmd_res == CommandResult::AMBIGIOUS_COMMAND) {
+    } else if (cmd_res == CommandResult::AMBIGUOUS_COMMAND) {
 
     } else if ((cmd_res == CommandResult::SUCCESS) ||
                (cmd_res == CommandResult::FAILURE)) {
@@ -75,8 +105,8 @@ int main() {
     case CommandResult::INVALID_COMMAND:
       std::cout << style_error("ERROR: Invalid command.") << std::endl;
       continue;
-    case CommandResult::AMBIGIOUS_COMMAND:
-      std::cout << style_error("ERROR: Ambigious command.") << std::endl;
+    case CommandResult::AMBIGUOUS_COMMAND:
+      std::cout << style_error("ERROR: Ambiguous command.") << std::endl;
       continue;
 
     case CommandResult::NOT_COMMAND:
@@ -107,6 +137,7 @@ int main() {
 
     const auto analysis = analyze_number(as_int, state.enabled_analysis);
     state.history.push_back(analysis.num);
+    state.done_analysis = true;
 
     for (auto af : analysis_funcs_order) {
       // if disabled yet somehow exists in logs, skip.
@@ -124,34 +155,11 @@ int main() {
         }
       if (analysis.errors.find(af) != analysis.errors.end())
         for (auto l : analysis.errors.find(af)->second) {
-          std::cout << style_error("    ERROR: " + l) << std::endl;
+          std::cout << "    " << style_error("ERROR: " + l) << std::endl;
         }
     }
 
     std::cout << std::endl;
-
-    if (!state.auto_repeat) {
-      while (true) {
-        std::cout << style_output_secondary(
-                         "Do you want to analyze another number? (y/N)")
-                  << std::endl;
-        std::cout << style_input_secondary("> ");
-        std::getline(std::cin, user_input);
-        user_input = lower_case_string(trim_string(user_input));
-        if (user_input.empty())
-          continue;
-        if (user_input[0] == 'y') {
-          break;
-        } else if (user_input[0] == 'n') {
-          state.running = false;
-          break;
-        } else {
-          std::cout << style_error("Please type in only either 'y' or 'n'.")
-                    << std::endl;
-          continue;
-        }
-      }
-    }
   }
 
   std::cout << style_info("Exiting number theory analyzer! Goodbye!")

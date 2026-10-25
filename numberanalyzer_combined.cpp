@@ -80,12 +80,13 @@ enum class CommandResult {
   NOT_COMMAND,
   MISSING_COMMAND,
   INVALID_COMMAND,
-  AMBIGIOUS_COMMAND,
+  AMBIGUOUS_COMMAND,
 };
 
 struct ProgramState {
   bool running;
   bool auto_repeat;
+  bool done_analysis;
   std::vector<int64_t> history;
   std::map<std::string, bool> enabled_analysis;
   std::map<std::string, double> user_constants;
@@ -129,7 +130,7 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
     {"only",
      {cmd_only,
       "Enables only the analysis function matching the input; disabling "
-      "anything else.",
+      "everything else.",
       "factor"}},
     {"enableall",
      {cmd_enable_all, "Enables all of the analysis functions.", ""}},
@@ -462,6 +463,7 @@ int main() {
   auto state = ProgramState{};
   state.running = true;
   state.auto_repeat = false;
+  state.done_analysis = false;
   state.user_constants = default_math_consts;
   for (auto f : analysis_funcs_order) {
     state.enabled_analysis[f] = true;
@@ -470,6 +472,35 @@ int main() {
   std::string user_input;
 
   while (state.running) {
+    // We place the check here because /exact also does analysis
+    if (state.done_analysis && !state.auto_repeat) {
+      while (true) {
+        std::cout << style_output_secondary(
+                         "Do you want to analyze another number? (y/n)")
+                  << std::endl;
+        std::cout << style_input_secondary("> ");
+        std::getline(std::cin, user_input);
+        user_input = lower_case_string(trim_string(user_input));
+
+        if (user_input.empty())
+          continue;
+        if (user_input[0] == 'y') {
+          state.done_analysis = false;
+          break;
+        } else if (user_input[0] == 'n') {
+          state.running = false;
+          break;
+        } else {
+          std::cout << style_error("Please type in only either 'y' or 'n'.")
+                    << std::endl;
+          continue;
+        }
+      }
+      continue;
+    }
+
+    state.done_analysis = false;
+
     std::cout
         << std::endl
         << style_italic(
@@ -498,7 +529,7 @@ int main() {
       break;
     } else if (cmd_res == CommandResult::MISSING_COMMAND) {
     } else if (cmd_res == CommandResult::INVALID_COMMAND) {
-    } else if (cmd_res == CommandResult::AMBIGIOUS_COMMAND) {
+    } else if (cmd_res == CommandResult::AMBIGUOUS_COMMAND) {
 
     } else if ((cmd_res == CommandResult::SUCCESS) ||
                (cmd_res == CommandResult::FAILURE)) {
@@ -517,8 +548,8 @@ int main() {
     case CommandResult::INVALID_COMMAND:
       std::cout << style_error("ERROR: Invalid command.") << std::endl;
       continue;
-    case CommandResult::AMBIGIOUS_COMMAND:
-      std::cout << style_error("ERROR: Ambigious command.") << std::endl;
+    case CommandResult::AMBIGUOUS_COMMAND:
+      std::cout << style_error("ERROR: Ambiguous command.") << std::endl;
       continue;
 
     case CommandResult::NOT_COMMAND:
@@ -549,6 +580,7 @@ int main() {
 
     const auto analysis = analyze_number(as_int, state.enabled_analysis);
     state.history.push_back(analysis.num);
+    state.done_analysis = true;
 
     for (auto af : analysis_funcs_order) {
       // if disabled yet somehow exists in logs, skip.
@@ -566,34 +598,11 @@ int main() {
         }
       if (analysis.errors.find(af) != analysis.errors.end())
         for (auto l : analysis.errors.find(af)->second) {
-          std::cout << style_error("    ERROR: " + l) << std::endl;
+          std::cout << "    " << style_error("ERROR: " + l) << std::endl;
         }
     }
 
     std::cout << std::endl;
-
-    if (!state.auto_repeat) {
-      while (true) {
-        std::cout << style_output_secondary(
-                         "Do you want to analyze another number? (y/N)")
-                  << std::endl;
-        std::cout << style_input_secondary("> ");
-        std::getline(std::cin, user_input);
-        user_input = lower_case_string(trim_string(user_input));
-        if (user_input.empty())
-          continue;
-        if (user_input[0] == 'y') {
-          break;
-        } else if (user_input[0] == 'n') {
-          state.running = false;
-          break;
-        } else {
-          std::cout << style_error("Please type in only either 'y' or 'n'.")
-                    << std::endl;
-          continue;
-        }
-      }
-    }
   }
 
   std::cout << style_info("Exiting number theory analyzer! Goodbye!")
@@ -752,7 +761,14 @@ void num_prime_factors(int64_t num) {
     return;
   }
 
+  std::vector<int64_t> deduped_pfs;
   for (auto pf : prime_factors) {
+    if (std::find(deduped_pfs.begin(), deduped_pfs.end(), pf) ==
+        deduped_pfs.end())
+      deduped_pfs.push_back(pf);
+  }
+
+  for (auto pf : deduped_pfs) {
     cout << pf << ", ";
   }
 
@@ -815,7 +831,7 @@ void num_factors_amount(int64_t num) {
   } else {
     for (int divisor = 1; divisor <= abs(num); divisor++) {
       if (num % divisor == 0) {
-        factorCount += 2;
+        factorCount += 1;
       }
     }
 
@@ -1079,7 +1095,7 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
 }
 
 // Handles invalid inputs, returns empty string if either key doesnt exist or
-// ambigious.
+// ambiguous.
 std::string input_helper(const std::vector<std::string> items,
                          const std::string key, const std::string what) {
   auto trimmed_key = trim_string(key);
@@ -1241,6 +1257,7 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
 
   const auto analysis = analyze_number(exact, state->enabled_analysis);
   state->history.push_back(analysis.num);
+  state->done_analysis = true;
 
   for (auto af : analysis_funcs_order) {
     // if disabled yet somehow exists in logs, skip.
@@ -1258,7 +1275,7 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
       }
     if (analysis.errors.find(af) != analysis.errors.end())
       for (auto l : analysis.errors.find(af)->second) {
-        std::cout << style_error("    ERROR: " + l) << std::endl;
+        std::cout << "    " << style_error("ERROR: " + l) << std::endl;
       }
   }
 
@@ -1356,7 +1373,7 @@ CommandResult execute_command(const std::string input, ProgramState *state) {
   if (idx == -1) {
     return CommandResult::INVALID_COMMAND;
   } else if (idx == -2) {
-    return CommandResult::AMBIGIOUS_COMMAND;
+    return CommandResult::AMBIGUOUS_COMMAND;
   }
 
   auto name = command_keys[static_cast<size_t>(idx)];
@@ -2319,7 +2336,7 @@ int smart_find_index(const std::vector<std::string> items,
           match = true;
           match_idx = static_cast<int>(i);
         } else {
-          // second+ match, ambigious
+          // second+ match, ambiguous
           match = false;
           match_idx = -2;
           break;

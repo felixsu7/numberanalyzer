@@ -91,7 +91,14 @@ void num_prime_factors(int64_t num) {
     return;
   }
 
+  std::vector<int64_t> deduped_pfs;
   for (auto pf : prime_factors) {
+    if (std::find(deduped_pfs.begin(), deduped_pfs.end(), pf) ==
+        deduped_pfs.end())
+      deduped_pfs.push_back(pf);
+  }
+
+  for (auto pf : deduped_pfs) {
     cout << pf << ", ";
   }
 
@@ -154,7 +161,7 @@ void num_factors_amount(int64_t num) {
   } else {
     for (int divisor = 1; divisor <= abs(num); divisor++) {
       if (num % divisor == 0) {
-        factorCount += 2;
+        factorCount += 1;
       }
     }
 

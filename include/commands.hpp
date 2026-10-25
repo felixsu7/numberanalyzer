@@ -11,12 +11,13 @@ enum class CommandResult {
   NOT_COMMAND,
   MISSING_COMMAND,
   INVALID_COMMAND,
-  AMBIGIOUS_COMMAND,
+  AMBIGUOUS_COMMAND,
 };
 
 struct ProgramState {
   bool running;
   bool auto_repeat;
+  bool done_analysis;
   std::vector<int64_t> history;
   std::map<std::string, bool> enabled_analysis;
   std::map<std::string, double> user_constants;
@@ -60,7 +61,7 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
     {"only",
      {cmd_only,
       "Enables only the analysis function matching the input; disabling "
-      "anything else.",
+      "everything else.",
       "factor"}},
     {"enableall",
      {cmd_enable_all, "Enables all of the analysis functions.", ""}},

@@ -76,7 +76,7 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
 }
 
 // Handles invalid inputs, returns empty string if either key doesnt exist or
-// ambigious.
+// ambiguous.
 std::string input_helper(const std::vector<std::string> items,
                          const std::string key, const std::string what) {
   auto trimmed_key = trim_string(key);
@@ -238,6 +238,7 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
 
   const auto analysis = analyze_number(exact, state->enabled_analysis);
   state->history.push_back(analysis.num);
+  state->done_analysis = true;
 
   for (auto af : analysis_funcs_order) {
     // if disabled yet somehow exists in logs, skip.
@@ -255,7 +256,7 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
       }
     if (analysis.errors.find(af) != analysis.errors.end())
       for (auto l : analysis.errors.find(af)->second) {
-        std::cout << style_error("    ERROR: " + l) << std::endl;
+        std::cout << "    " << style_error("ERROR: " + l) << std::endl;
       }
   }
 
@@ -353,7 +354,7 @@ CommandResult execute_command(const std::string input, ProgramState *state) {
   if (idx == -1) {
     return CommandResult::INVALID_COMMAND;
   } else if (idx == -2) {
-    return CommandResult::AMBIGIOUS_COMMAND;
+    return CommandResult::AMBIGUOUS_COMMAND;
   }
 
   auto name = command_keys[static_cast<size_t>(idx)];
