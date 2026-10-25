@@ -82,17 +82,6 @@ int main() {
 
     auto cmd_res = execute_command(user_input, &state);
 
-    if (cmd_res == CommandResult::QUIT) {
-      break;
-    } else if (cmd_res == CommandResult::MISSING_COMMAND) {
-    } else if (cmd_res == CommandResult::INVALID_COMMAND) {
-    } else if (cmd_res == CommandResult::AMBIGUOUS_COMMAND) {
-
-    } else if ((cmd_res == CommandResult::SUCCESS) ||
-               (cmd_res == CommandResult::FAILURE)) {
-      continue;
-    }
-
     switch (cmd_res) {
     case CommandResult::SUCCESS:
     case CommandResult::FAILURE:
@@ -135,6 +124,7 @@ int main() {
 
     state.user_constants["ans"] = evaled;
 
+    handle_secondary_input_dialogue(&state);
     const auto analysis = analyze_number(as_int, state.enabled_analysis);
     state.history.push_back(analysis.num);
     state.done_analysis = true;

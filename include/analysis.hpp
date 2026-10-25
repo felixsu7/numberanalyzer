@@ -1,5 +1,6 @@
 #pragma once
 
+#include "commands.hpp"
 #include <cstdint>
 #include <map>
 #include <string>
@@ -15,35 +16,35 @@ struct NumberAnalysis {
   string_vec_map errors;
 };
 
-AnalysisFuncDef num_sign;
-AnalysisFuncDef num_even_odd;
-AnalysisFuncDef num_divisbility;
-AnalysisFuncDef num_factors;
-AnalysisFuncDef num_factors_amount;
-AnalysisFuncDef num_prime_composite;
-AnalysisFuncDef num_factors_sum;
-AnalysisFuncDef num_perfect;
-AnalysisFuncDef num_collatz;
-AnalysisFuncDef num_prime_factors;
-AnalysisFuncDef num_perfect_square_cube;
-AnalysisFuncDef num_is_triangular;
+AnalysisFuncDef analysis_sign;
+AnalysisFuncDef analysis_even_odd;
+AnalysisFuncDef analysis_divisbility;
+AnalysisFuncDef analysis_factors;
+AnalysisFuncDef analysis_factors_amount;
+AnalysisFuncDef analysis_prime_composite;
+AnalysisFuncDef analysis_factors_sum;
+AnalysisFuncDef analysis_perfect;
+AnalysisFuncDef analysis_collatz;
+AnalysisFuncDef analysis_prime_factors;
+AnalysisFuncDef analysis_perfect_square_cube;
+AnalysisFuncDef analysis_is_triangular;
 // I guess this is also considered as 12. Triangular Number
-AnalysisFuncDef num_nth_triangular;
+AnalysisFuncDef analysis_nth_triangular;
 
 static const std::map<std::string, AnalysisFuncDef *> analysis_funcs = {
-    {"Positive/Negative/Zero", num_sign},
-    {"Even/Odd", num_even_odd},
-    {"Divisibility", num_divisbility},
-    {"Factors", num_factors},
-    {"Number of Factors", num_factors_amount},
-    {"Prime or composite", num_prime_composite},
-    {"Sum of Factors", num_factors_sum},
-    {"Perfect Number", num_perfect},
-    {"Collatz Conjecture Sequence", num_collatz},
-    {"Prime Factorization", num_prime_factors},
-    {"Perfect Square/Cube", num_perfect_square_cube},
-    {"Triangular Number", num_is_triangular},
-    {"nth Triangular Number", num_nth_triangular},
+    {"Positive/Negative/Zero", analysis_sign},
+    {"Even/Odd", analysis_even_odd},
+    {"Divisibility", analysis_divisbility},
+    {"Factors", analysis_factors},
+    {"Number of Factors", analysis_factors_amount},
+    {"Prime or composite", analysis_prime_composite},
+    {"Sum of Factors", analysis_factors_sum},
+    {"Perfect Number", analysis_perfect},
+    {"Collatz Conjecture Sequence", analysis_collatz},
+    {"Prime Factorization", analysis_prime_factors},
+    {"Perfect Square/Cube", analysis_perfect_square_cube},
+    {"Triangular Number", analysis_is_triangular},
+    {"nth Triangular Number", analysis_nth_triangular},
 };
 
 // Theres no ordered maps.
@@ -66,5 +67,9 @@ static const std::vector<std::string> analysis_funcs_order = {
 void set_iterations_limit(uint n);
 uint get_iteration_limit();
 
+void set_secondary_inputs(const std::vector<int64_t> v);
+
 NumberAnalysis analyze_number(int64_t num,
                               const std::map<std::string, bool> enabled);
+
+void handle_secondary_input_dialogue(ProgramState *state);

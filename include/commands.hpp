@@ -18,6 +18,7 @@ struct ProgramState {
   bool running;
   bool auto_repeat;
   bool done_analysis;
+  std::vector<int64_t> secondary_inputs;
   std::vector<int64_t> history;
   std::map<std::string, bool> enabled_analysis;
   std::map<std::string, double> user_constants;

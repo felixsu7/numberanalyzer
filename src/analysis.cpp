@@ -1,8 +1,12 @@
 #include "analysis.hpp"
+#include "commands.hpp"
+#include "evaluator.hpp"
+#include "styling.hpp"
 #include "utils.hpp"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -16,6 +20,13 @@ void set_iterations_limit(uint n) { ITERATION_LIMIT = n; }
 
 uint get_iteration_limit() { return ITERATION_LIMIT; }
 
+// this is just horrible practice in general.
+static std::vector<int64_t> SECONDARY_INPUTS;
+
+void set_secondary_inputs(const std::vector<int64_t> v) {
+  SECONDARY_INPUTS = v;
+}
+
 // The order of definitions was based on when they were submitted
 
 // It should be noted that I modified their submissions, mainly on checks, the
@@ -24,17 +35,23 @@ uint get_iteration_limit() { return ITERATION_LIMIT; }
 // Originally, this accepted two inputs.
 // However, I turned it into analysis of what numbers does it divide cleanly
 // with. Checking from 1 to N.
-void num_divisbility(int64_t num) {
+// UPDATE: special yarn?
+void analysis_divisbility(int64_t num) {
   if (num == 0) {
     cout << "Zero divided by any number is always zero." << endl;
     return;
   };
 
-  // Regular abs is erroring out in large enough negative values, so we handle
-  // negatives seperately, check utils.cpp
+  if (SECONDARY_INPUTS.empty()) {
+    cout << "ERROR: No secondary inputs set." << endl;
+    return;
+  }
+
   cout << num << " is divisible by ";
-  for (uint64_t d = 1; d <= uabs(num); d++) {
-    if (uabs(num) % d == 0) {
+  for (auto d : SECONDARY_INPUTS) {
+    if (d == 0)
+      continue;
+    if (num % d == 0) {
       cout << d << ", ";
     }
   }
@@ -42,7 +59,7 @@ void num_divisbility(int64_t num) {
   cout << endl;
 }
 
-void num_sign(int64_t num) {
+void analysis_sign(int64_t num) {
   if (num < 0) {
     cout << num << " is negative." << endl;
   } else if (num == 0) {
@@ -82,7 +99,7 @@ std::vector<int64_t> _primefactors(int64_t n) {
   return factors;
 }
 
-void num_prime_factors(int64_t num) {
+void analysis_prime_factors(int64_t num) {
   auto prime_factors = _primefactors(num);
 
   // TODO real ba?
@@ -105,7 +122,7 @@ void num_prime_factors(int64_t num) {
   cout << endl;
 }
 
-void num_perfect_square_cube(int64_t num) {
+void analysis_perfect_square_cube(int64_t num) {
   // I added this check.
   if (num < 0) {
     cout << "ERROR: Input cannot be negative." << endl;
@@ -128,7 +145,7 @@ void num_perfect_square_cube(int64_t num) {
   }
 }
 
-void num_even_odd(int64_t num) {
+void analysis_even_odd(int64_t num) {
   if (num % 2 == 0) {
     cout << num << " is an even number." << endl;
   } else {
@@ -136,7 +153,7 @@ void num_even_odd(int64_t num) {
   }
 }
 
-void num_factors_sum(int64_t num) {
+void analysis_factors_sum(int64_t num) {
   int64_t sum = 0;
 
   if (num < 0) {
@@ -153,7 +170,7 @@ void num_factors_sum(int64_t num) {
   cout << num << " has sum of positive factors of " << sum << "." << endl;
 }
 
-void num_factors_amount(int64_t num) {
+void analysis_factors_amount(int64_t num) {
   int64_t factorCount = 0;
 
   if (num == 0) {
@@ -169,7 +186,7 @@ void num_factors_amount(int64_t num) {
   }
 }
 
-void num_prime_composite(int64_t num) {
+void analysis_prime_composite(int64_t num) {
   int64_t divisor = 0;
 
   // How about 1, 0, and the negatives?
@@ -192,7 +209,7 @@ void num_prime_composite(int64_t num) {
   }
 }
 
-void num_collatz(int64_t num) {
+void analysis_collatz(int64_t num) {
   int64_t Colture = num;
 
   // I added this check because it is infinitely looping on negative and zeroes.
@@ -222,7 +239,7 @@ void num_collatz(int64_t num) {
   cout << 1 << endl;
 }
 
-void num_perfect(int64_t num) {
+void analysis_perfect(int64_t num) {
   // Numbers <= 1 cannot be perfect numbers (the smallest perfect number is 6)
   if (num <= 1) {
     cout << num << " is not a perfect number." << endl;
@@ -247,7 +264,7 @@ void num_perfect(int64_t num) {
   }
 }
 
-std::string num_suffix(int64_t num) {
+std::string analysis_suffix(int64_t num) {
   auto ones = num % 10;
   if (ones == 1) {
     return "st";
@@ -260,7 +277,7 @@ std::string num_suffix(int64_t num) {
   }
 }
 
-void num_nth_triangular(int64_t num) {
+void analysis_nth_triangular(int64_t num) {
   if (num < 0) {
     cout << "ERROR: Input cannot be negative." << endl;
     return;
@@ -268,11 +285,11 @@ void num_nth_triangular(int64_t num) {
 
   // Triangular number: n(n+1)/2
   // TODO: change th to proper suffix
-  cout << num << num_suffix(num) << " triangular number is "
+  cout << num << analysis_suffix(num) << " triangular number is "
        << (num * (num + 1)) / 2 << endl;
 }
 
-void num_is_triangular(int64_t num) {
+void analysis_is_triangular(int64_t num) {
   if (num < 0) {
     cout << num << " is not a triangular number." << endl;
     return;
@@ -289,7 +306,7 @@ void num_is_triangular(int64_t num) {
   }
 }
 
-void num_factors(int64_t num) {
+void analysis_factors(int64_t num) {
   if (num == 0) {
     cout << "Zero has infinite amount of factors." << endl;
     return;
@@ -351,3 +368,66 @@ NumberAnalysis analyze_number(int64_t num,
 
   return analysis;
 }
+
+// idk whats a better place to place this
+// just bad code all around
+void handle_secondary_input_dialogue(ProgramState *state) {
+  set_secondary_inputs({});
+  if (!state->enabled_analysis["Divisibility"])
+    return;
+
+  std::cout
+      << std::endl
+      << style_info(
+             "Since the Divisibility analysis function is enabled, please "
+             "input "
+             "secondary integers to be tested against; seperated by space. "
+             "Type "
+             "'q' to not input anything.")
+      << std::endl;
+
+  while (true) {
+    std::string user_input;
+    std::cout << style_input_secondary("> ");
+    if (is_ansi_enabled())
+      std::cout << "\033[38;5;34m" << std::flush;
+    // std::in immediately returns on space
+    std::getline(std::cin, user_input);
+    if (is_ansi_enabled())
+      std::cout << RESET_STYLE << std::flush;
+
+    user_input = lower_case_string(trim_string(user_input));
+    if (user_input.empty())
+      continue;
+    if (user_input[0] == 'q') {
+      std::cout << style_output_primary("No secondary inputs set, continuing.")
+                << std::endl;
+      break;
+    }
+
+    std::vector<int64_t> collected;
+    // basically, we are very forgiving, ignoring garbage.
+    while (!user_input.empty()) {
+      char *end;
+      int64_t num = std::strtoll(user_input.c_str(), &end, 10);
+      if (end == user_input.c_str()) {
+        if (!user_input.empty())
+          user_input.erase(0, 1);
+        continue;
+      }
+      collected.push_back(num);
+      user_input.erase(0, static_cast<size_t>(end - user_input.c_str()) + 1);
+    }
+
+    if (collected.empty()) {
+      std::cout << style_error("ERROR: No parsable inputs, try again or 'q' to "
+                               "stop immediately.")
+                << std::endl;
+      continue;
+    }
+
+    state->secondary_inputs = collected;
+    set_secondary_inputs(state->secondary_inputs);
+    break;
+  }
+};

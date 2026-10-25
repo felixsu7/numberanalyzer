@@ -236,6 +236,8 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
     return CommandResult::FAILURE;
   }
 
+  // TODO: extract these out
+  handle_secondary_input_dialogue(state);
   const auto analysis = analyze_number(exact, state->enabled_analysis);
   state->history.push_back(analysis.num);
   state->done_analysis = true;
