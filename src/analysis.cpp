@@ -108,7 +108,6 @@ std::vector<int64_t> _primefactors(int64_t n) {
 void analysis_prime_factors(int64_t num) {
   auto prime_factors = _primefactors(num);
 
-  // TODO real ba?
   if (prime_factors.empty()) {
     cout << num << " has no prime factors." << endl;
     return;
@@ -290,9 +289,8 @@ void analysis_nth_triangular(int64_t num) {
   }
 
   // Triangular number: n(n+1)/2
-  // TODO: change th to proper suffix
   cout << num << analysis_suffix(num) << " triangular number is "
-       << (num * (num + 1)) / 2 << endl;
+       << (num * (num + 1)) / 2 << "." << endl;
 }
 
 void analysis_is_triangular(int64_t num) {
@@ -370,8 +368,6 @@ NumberAnalysis analyze_number(int64_t num,
     dump_logs(name, &analysis.logs, &analysis.errors);
   }
 
-  // TODO: process errors
-
   return analysis;
 }
 
@@ -389,7 +385,7 @@ void handle_secondary_input_dialogue(ProgramState *state) {
              "input "
              "selected integers to be tested against; separated by semicolons "
              "(';'). "
-             "Type in exactly"
+             "Type in exactly "
              "'q' to not input anything.")
       << std::endl;
 

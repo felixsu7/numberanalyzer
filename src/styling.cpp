@@ -1,14 +1,26 @@
 #include "styling.hpp"
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
 static bool ANSI_ENABLED = true;
 
 void toggle_ansi(bool state) { ANSI_ENABLED = state; }
 
 bool try_enable_ansi() {
-  // intentionally excluded from NO_PLATFORM_SPECIFIC
 #if defined(_WIN32)
-  // TODO;
-  return false;
+  HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+  DWORD mode;
+  if (h == INVALID_HANDLE_VALUE || !GetConsoleMode(h, &mode))
+    return 0; /* not a console (redirected/piped) */
+  if (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+    return 1;
+  return SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0;
 #elif defined(__unix__)
   // Assume always yes.
   // TODO maybe NO_COLOR env var?

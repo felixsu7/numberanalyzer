@@ -126,7 +126,6 @@ class Evaluator {
         return val;
       } else {
         // Constants
-        // TODO take in a map of consts
         auto it = user_constants.find(id);
         if (it == user_constants.end())
           return EvaluationError{start, "Unknown constant", id, ""};

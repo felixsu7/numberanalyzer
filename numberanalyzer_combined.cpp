@@ -424,12 +424,13 @@ int main() {
     state.history.push_back(analysis.num);
     state.done_analysis = true;
 
+    bool at_least_one = false;
     for (auto af : analysis_funcs_order) {
       // if disabled yet somehow exists in logs, skip.
       // also includes sanity checks
       if (auto it = state.enabled_analysis.find(af);
           it != state.enabled_analysis.end() && !it->second &&
-          analysis.logs.find(af) != analysis.logs.end())
+          analysis.logs.find(af) == analysis.logs.end())
         continue;
 
       std::cout << style_info(af) << ":" << std::endl;
@@ -437,12 +438,18 @@ int main() {
       if (analysis.logs.find(af) != analysis.logs.end())
         for (auto l : analysis.logs.find(af)->second) {
           std::cout << "    " << style_output_primary(l) << std::endl;
+          at_least_one = true;
         }
       if (analysis.errors.find(af) != analysis.errors.end())
         for (auto l : analysis.errors.find(af)->second) {
           std::cout << "    " << style_error("ERROR: " + l) << std::endl;
+          at_least_one = true;
         }
     }
+
+    if (!at_least_one)
+      std::cout << std::endl
+                << style_info("No enabled analysis functions...") << std::endl;
 
     std::cout << std::endl;
   }
@@ -727,12 +734,13 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
   state->history.push_back(analysis.num);
   state->done_analysis = true;
 
+  bool at_least_one = false;
   for (auto af : analysis_funcs_order) {
     // if disabled yet somehow exists in logs, skip.
     // also includes sanity checks
     if (auto it = state->enabled_analysis.find(af);
         it != state->enabled_analysis.end() && !it->second &&
-        analysis.logs.find(af) != analysis.logs.end())
+        analysis.logs.find(af) == analysis.logs.end())
       continue;
 
     std::cout << style_info(af) << ":" << std::endl;
@@ -740,12 +748,18 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
     if (analysis.logs.find(af) != analysis.logs.end())
       for (auto l : analysis.logs.find(af)->second) {
         std::cout << "    " << style_output_primary(l) << std::endl;
+        at_least_one = true;
       }
     if (analysis.errors.find(af) != analysis.errors.end())
       for (auto l : analysis.errors.find(af)->second) {
         std::cout << "    " << style_error("ERROR: " + l) << std::endl;
+        at_least_one = true;
       }
   }
+
+  if (!at_least_one)
+    std::cout << std::endl
+              << style_info("No enabled analysis functions...") << std::endl;
 
   std::cout << std::endl;
 
@@ -954,7 +968,6 @@ std::vector<int64_t> _primefactors(int64_t n) {
 void analysis_prime_factors(int64_t num) {
   auto prime_factors = _primefactors(num);
 
-  // TODO real ba?
   if (prime_factors.empty()) {
     cout << num << " has no prime factors." << endl;
     return;
@@ -1136,9 +1149,8 @@ void analysis_nth_triangular(int64_t num) {
   }
 
   // Triangular number: n(n+1)/2
-  // TODO: change th to proper suffix
   cout << num << analysis_suffix(num) << " triangular number is "
-       << (num * (num + 1)) / 2 << endl;
+       << (num * (num + 1)) / 2 << "." << endl;
 }
 
 void analysis_is_triangular(int64_t num) {
@@ -1216,8 +1228,6 @@ NumberAnalysis analyze_number(int64_t num,
     dump_logs(name, &analysis.logs, &analysis.errors);
   }
 
-  // TODO: process errors
-
   return analysis;
 }
 
@@ -1235,7 +1245,7 @@ void handle_secondary_input_dialogue(ProgramState *state) {
              "input "
              "selected integers to be tested against; separated by semicolons "
              "(';'). "
-             "Type in exactly"
+             "Type in exactly "
              "'q' to not input anything.")
       << std::endl;
 
@@ -1435,7 +1445,6 @@ class Evaluator {
         return val;
       } else {
         // Constants
-        // TODO take in a map of consts
         auto it = user_constants.find(id);
         if (it == user_constants.end())
           return EvaluationError{start, "Unknown constant", id, ""};
@@ -1506,15 +1515,27 @@ evaluate_expression(std::string expr,
   return p.evaluate_expression(expr);
 }
 
+#if defined(_WIN32)
+#include <windows.h>
+#endif
+
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
 static bool ANSI_ENABLED = true;
 
 void toggle_ansi(bool state) { ANSI_ENABLED = state; }
 
 bool try_enable_ansi() {
-  // intentionally excluded from NO_PLATFORM_SPECIFIC
 #if defined(_WIN32)
-  // TODO;
-  return false;
+  HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+  DWORD mode;
+  if (h == INVALID_HANDLE_VALUE || !GetConsoleMode(h, &mode))
+    return 0; /* not a console (redirected/piped) */
+  if (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+    return 1;
+  return SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0;
 #elif defined(__unix__)
   // Assume always yes.
   // TODO maybe NO_COLOR env var?

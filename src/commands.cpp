@@ -242,12 +242,13 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
   state->history.push_back(analysis.num);
   state->done_analysis = true;
 
+  bool at_least_one = false;
   for (auto af : analysis_funcs_order) {
     // if disabled yet somehow exists in logs, skip.
     // also includes sanity checks
     if (auto it = state->enabled_analysis.find(af);
         it != state->enabled_analysis.end() && !it->second &&
-        analysis.logs.find(af) != analysis.logs.end())
+        analysis.logs.find(af) == analysis.logs.end())
       continue;
 
     std::cout << style_info(af) << ":" << std::endl;
@@ -255,12 +256,18 @@ CommandResult cmd_exact_input(const std::string input, ProgramState *state) {
     if (analysis.logs.find(af) != analysis.logs.end())
       for (auto l : analysis.logs.find(af)->second) {
         std::cout << "    " << style_output_primary(l) << std::endl;
+        at_least_one = true;
       }
     if (analysis.errors.find(af) != analysis.errors.end())
       for (auto l : analysis.errors.find(af)->second) {
         std::cout << "    " << style_error("ERROR: " + l) << std::endl;
+        at_least_one = true;
       }
   }
+
+  if (!at_least_one)
+    std::cout << std::endl
+              << style_info("No enabled analysis functions...") << std::endl;
 
   std::cout << std::endl;
 
