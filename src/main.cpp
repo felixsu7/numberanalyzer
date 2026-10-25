@@ -1,8 +1,6 @@
 #include "analysis.hpp"
 #include "commands.hpp"
 #include "evaluator.hpp"
-#include "platform.hpp"
-#include "screen.hpp"
 #include "styling.hpp"
 #include "utils.hpp"
 #include <cerrno>
@@ -10,7 +8,6 @@
 #include <cstring>
 #include <iostream>
 
-PLATFORM_ERROR enter_tui_mode();
 void display_welcome_banner();
 
 int main() {
@@ -155,30 +152,6 @@ int main() {
             << std::endl;
 
   return 0;
-}
-
-PLATFORM_ERROR enter_tui_mode() {
-  // TODO: query screen size
-  Screen screen(100, 50);
-  screen.activate();
-  Cell c = default_cell;
-  cell_set_glyph(&c, "A", 1);
-  bool running = true;
-  while (running) {
-    PlatformEvent ev = screen.event_poll(100);
-    c.bg.active = true;
-    c.bg.red = 127;
-    c.bg.green = 127;
-    c.bg.blue = 127;
-    // why
-    screen.draw_rect(0, 0, 101, 50, c);
-    screen.present();
-    if (ev.key == 'q') {
-      running = false;
-      break;
-    }
-  }
-  return screen.deactivate();
 }
 
 void display_welcome_banner() {
