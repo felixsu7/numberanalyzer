@@ -5,6 +5,7 @@
 const std::string RESET_STYLE = "\033[0m";
 void toggle_ansi(bool state);
 bool try_enable_ansi();
+bool is_ansi_enabled();
 
 using simple_style_func = std::string(std::string s);
 

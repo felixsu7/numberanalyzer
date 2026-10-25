@@ -106,6 +106,7 @@ CommandFuncDef cmd_define_constant;
 CommandFuncDef cmd_undefine_constant;
 CommandFuncDef cmd_exact_input;
 CommandFuncDef cmd_history;
+CommandFuncDef cmd_toggle_styling;
 
 static const std::map<std::string, CommandDef> cmd_funcs = {
     {"info",
@@ -134,7 +135,9 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
      {cmd_exact_input, "Analyzes an exact integer; has better precision.",
       "-9223372036854775808"}},
     {"history",
-     {cmd_history, "Views past analyzed numbers during this session.", ""}}};
+     {cmd_history, "Views past analyzed numbers during this session.", ""}},
+    {"styling",
+     {cmd_toggle_styling, "Toggles color and styling of outputs.", ""}}};
 
 CommandResult execute_command(const std::string input, ProgramState *state);
 
@@ -389,6 +392,7 @@ private:
 const std::string RESET_STYLE = "\033[0m";
 void toggle_ansi(bool state);
 bool try_enable_ansi();
+bool is_ansi_enabled();
 
 using simple_style_func = std::string(std::string s);
 
@@ -460,12 +464,18 @@ int main() {
     std::cout << style_input_secondary("> ");
 
     // make sure this doesnt mess up on any exit TODO
-    std::cout << "\033[38;5;34m" << std::flush;
+    if (is_ansi_enabled())
+      std::cout << "\033[38;5;34m" << std::flush;
     // std::in immediately returns on space
     std::getline(std::cin, user_input);
-    std::cout << RESET_STYLE << std::flush;
+    if (is_ansi_enabled())
+      std::cout << RESET_STYLE << std::flush;
 
     user_input = trim_string(user_input);
+
+    if (user_input.empty()) {
+      continue;
+    }
 
     auto cmd_res = execute_command(user_input, &state);
 
@@ -599,11 +609,13 @@ void display_welcome_banner() {
   logo_lines.push_back("                 +++++++++++++       \n");
 
   // TODO gradient
-  std::cout << "\033[38;2;228;163;178m";
+  if (is_ansi_enabled())
+    std::cout << "\033[38;2;228;163;178m";
   for (auto l : logo_lines) {
     std::cout << l;
   }
-  std::cout << RESET_STYLE << std::endl;
+  if (is_ansi_enabled())
+    std::cout << RESET_STYLE << std::endl;
 }
 
 #include <cassert>
@@ -944,7 +956,7 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
     }
   }
 
-  std::cout << std::endl << style_info("Functions:");
+  std::cout << std::endl << style_info("Functions:") << " ";
 
   bool first = true;
   for (auto [mf, def] : math_funcs) {
@@ -963,7 +975,7 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
     std::cout << style_bold(mf + "(" + args + ")");
   }
 
-  std::cout << std::endl << std::endl << style_info("Constants: ");
+  std::cout << std::endl << std::endl << style_info("Constants:") << " ";
 
   first = true;
   for (auto [uc, val] : state->user_constants) {
@@ -1182,6 +1194,22 @@ CommandResult cmd_history(const std::string _, ProgramState *state) {
   }
 
   std::cout << std::endl;
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_toggle_styling(const std::string _, ProgramState *) {
+  if (is_ansi_enabled())
+    std::cout << RESET_STYLE << std::flush;
+
+  toggle_ansi(!is_ansi_enabled());
+
+  if (is_ansi_enabled()) {
+    std::cout << style_output_primary("Enabled colors and styling of outputs!")
+              << std::endl;
+  } else {
+    std::cout << "Disabled colors and styling of outputs!" << std::endl;
+  }
+
   return CommandResult::SUCCESS;
 }
 
@@ -2010,6 +2038,8 @@ bool try_enable_ansi() {
 #endif
   return false;
 }
+
+bool is_ansi_enabled() { return ANSI_ENABLED; }
 
 std::string style_bold(std::string s) {
   if (!ANSI_ENABLED)

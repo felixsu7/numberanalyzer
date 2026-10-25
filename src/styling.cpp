@@ -17,6 +17,8 @@ bool try_enable_ansi() {
   return false;
 }
 
+bool is_ansi_enabled() { return ANSI_ENABLED; }
+
 std::string style_bold(std::string s) {
   if (!ANSI_ENABLED)
     return s;

@@ -36,12 +36,18 @@ int main() {
     std::cout << style_input_secondary("> ");
 
     // make sure this doesnt mess up on any exit TODO
-    std::cout << "\033[38;5;34m" << std::flush;
+    if (is_ansi_enabled())
+      std::cout << "\033[38;5;34m" << std::flush;
     // std::in immediately returns on space
     std::getline(std::cin, user_input);
-    std::cout << RESET_STYLE << std::flush;
+    if (is_ansi_enabled())
+      std::cout << RESET_STYLE << std::flush;
 
     user_input = trim_string(user_input);
+
+    if (user_input.empty()) {
+      continue;
+    }
 
     auto cmd_res = execute_command(user_input, &state);
 
@@ -175,9 +181,11 @@ void display_welcome_banner() {
   logo_lines.push_back("                 +++++++++++++       \n");
 
   // TODO gradient
-  std::cout << "\033[38;2;228;163;178m";
+  if (is_ansi_enabled())
+    std::cout << "\033[38;2;228;163;178m";
   for (auto l : logo_lines) {
     std::cout << l;
   }
-  std::cout << RESET_STYLE << std::endl;
+  if (is_ansi_enabled())
+    std::cout << RESET_STYLE << std::endl;
 }

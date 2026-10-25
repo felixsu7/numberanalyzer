@@ -40,6 +40,7 @@ CommandFuncDef cmd_define_constant;
 CommandFuncDef cmd_undefine_constant;
 CommandFuncDef cmd_exact_input;
 CommandFuncDef cmd_history;
+CommandFuncDef cmd_toggle_styling;
 
 static const std::map<std::string, CommandDef> cmd_funcs = {
     {"info",
@@ -68,6 +69,8 @@ static const std::map<std::string, CommandDef> cmd_funcs = {
      {cmd_exact_input, "Analyzes an exact integer; has better precision.",
       "-9223372036854775808"}},
     {"history",
-     {cmd_history, "Views past analyzed numbers during this session.", ""}}};
+     {cmd_history, "Views past analyzed numbers during this session.", ""}},
+    {"styling",
+     {cmd_toggle_styling, "Toggles color and styling of outputs.", ""}}};
 
 CommandResult execute_command(const std::string input, ProgramState *state);

@@ -31,7 +31,7 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
     }
   }
 
-  std::cout << std::endl << style_info("Functions:");
+  std::cout << std::endl << style_info("Functions:") << " ";
 
   bool first = true;
   for (auto [mf, def] : math_funcs) {
@@ -50,7 +50,7 @@ CommandResult cmd_info(const std::string _, ProgramState *state) {
     std::cout << style_bold(mf + "(" + args + ")");
   }
 
-  std::cout << std::endl << std::endl << style_info("Constants: ");
+  std::cout << std::endl << std::endl << style_info("Constants:") << " ";
 
   first = true;
   for (auto [uc, val] : state->user_constants) {
@@ -269,6 +269,22 @@ CommandResult cmd_history(const std::string _, ProgramState *state) {
   }
 
   std::cout << std::endl;
+  return CommandResult::SUCCESS;
+}
+
+CommandResult cmd_toggle_styling(const std::string _, ProgramState *) {
+  if (is_ansi_enabled())
+    std::cout << RESET_STYLE << std::flush;
+
+  toggle_ansi(!is_ansi_enabled());
+
+  if (is_ansi_enabled()) {
+    std::cout << style_output_primary("Enabled colors and styling of outputs!")
+              << std::endl;
+  } else {
+    std::cout << "Disabled colors and styling of outputs!" << std::endl;
+  }
+
   return CommandResult::SUCCESS;
 }
 
