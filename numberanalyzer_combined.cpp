@@ -105,7 +105,7 @@ struct NumberAnalysis {
 
 AnalysisFuncDef analysis_sign;
 AnalysisFuncDef analysis_even_odd;
-AnalysisFuncDef analysis_divisbility;
+AnalysisFuncDef analysis_divisibility;
 AnalysisFuncDef analysis_factors;
 AnalysisFuncDef analysis_factors_amount;
 AnalysisFuncDef analysis_prime_composite;
@@ -121,7 +121,7 @@ AnalysisFuncDef analysis_nth_triangular;
 static const std::map<std::string, AnalysisFuncDef *> analysis_funcs = {
     {"Positive/Negative/Zero", analysis_sign},
     {"Even/Odd", analysis_even_odd},
-    {"Divisibility", analysis_divisbility},
+    {"Divisibility", analysis_divisibility},
     {"Factors", analysis_factors},
     {"Number of Factors", analysis_factors_amount},
     {"Prime or composite", analysis_prime_composite},
@@ -134,7 +134,7 @@ static const std::map<std::string, AnalysisFuncDef *> analysis_funcs = {
     {"nth Triangular Number", analysis_nth_triangular},
 };
 
-// Theres no ordered maps.
+// Theres no ordered maps, so we depend on this vector.
 static const std::vector<std::string> analysis_funcs_order = {
     "Positive/Negative/Zero",
     "Even/Odd",
@@ -899,7 +899,7 @@ void set_secondary_inputs(const std::vector<int64_t> v) {
 // However, I turned it into analysis of what numbers does it divide cleanly
 // with. Checking from 1 to N.
 // UPDATE: special yarn?
-void analysis_divisbility(int64_t num) {
+void analysis_divisibility(int64_t num) {
   if (num == 0) {
     cout << "Zero divided by any number is always zero." << endl;
     return;

@@ -18,7 +18,7 @@ struct NumberAnalysis {
 
 AnalysisFuncDef analysis_sign;
 AnalysisFuncDef analysis_even_odd;
-AnalysisFuncDef analysis_divisbility;
+AnalysisFuncDef analysis_divisibility;
 AnalysisFuncDef analysis_factors;
 AnalysisFuncDef analysis_factors_amount;
 AnalysisFuncDef analysis_prime_composite;
@@ -34,7 +34,7 @@ AnalysisFuncDef analysis_nth_triangular;
 static const std::map<std::string, AnalysisFuncDef *> analysis_funcs = {
     {"Positive/Negative/Zero", analysis_sign},
     {"Even/Odd", analysis_even_odd},
-    {"Divisibility", analysis_divisbility},
+    {"Divisibility", analysis_divisibility},
     {"Factors", analysis_factors},
     {"Number of Factors", analysis_factors_amount},
     {"Prime or composite", analysis_prime_composite},
@@ -47,7 +47,7 @@ static const std::map<std::string, AnalysisFuncDef *> analysis_funcs = {
     {"nth Triangular Number", analysis_nth_triangular},
 };
 
-// Theres no ordered maps.
+// Theres no ordered maps, so we depend on this vector.
 static const std::vector<std::string> analysis_funcs_order = {
     "Positive/Negative/Zero",
     "Even/Odd",

@@ -36,7 +36,7 @@ void set_secondary_inputs(const std::vector<int64_t> v) {
 // However, I turned it into analysis of what numbers does it divide cleanly
 // with. Checking from 1 to N.
 // UPDATE: special yarn?
-void analysis_divisbility(int64_t num) {
+void analysis_divisibility(int64_t num) {
   if (num == 0) {
     cout << "Zero divided by any number is always zero." << endl;
     return;
