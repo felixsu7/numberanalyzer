@@ -1,5 +1,24 @@
 #include "platform.hpp"
 
+// cxxdroid crashes on compile because of open()
+// Comment out if you want TUI features.
+#define NO_PLATFORM_SPECIFIC
+
+#ifdef NO_PLATFORM_SPECIFIC
+
+PLATFORM_ERROR platform_term_activate() {
+  return PLATFORM_ERROR::TUI_NOT_COMPILED;
+};
+PLATFORM_ERROR platform_term_deactivate() {
+  return PLATFORM_ERROR::TUI_NOT_COMPILED;
+};
+PLATFORM_ERROR platform_poll_event(uint64_t _, PlatformEvent *) {
+  return PLATFORM_ERROR::TUI_NOT_COMPILED;
+};
+uint64_t platform_monotime() { return 0; }
+
+#else
+
 #ifdef PLAT_WINDOWS
 
 HANDLE console_input = INVALID_HANDLE_VALUE;
@@ -246,4 +265,5 @@ uint64_t platform_monotime() {
   return static_cast<uint64_t>(ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
 };
 
+#endif
 #endif

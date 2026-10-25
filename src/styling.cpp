@@ -5,8 +5,16 @@ static bool ANSI_ENABLED = true;
 void toggle_ansi(bool state) { ANSI_ENABLED = state; }
 
 bool try_enable_ansi() {
-  // TODO
+  // intentionally excluded from NO_PLATFORM_SPECIFIC
+#if defined(_WIN32)
+  // TODO;
+  return false;
+#elif defined(__unix__)
+  // Assume always yes.
+  // TODO maybe NO_COLOR env var?
   return true;
+#endif
+  return false;
 }
 
 std::string style_bold(std::string s) {
