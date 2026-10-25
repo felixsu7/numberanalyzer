@@ -1,11 +1,6 @@
 #include "evaluator.hpp"
 #include "utils.hpp"
-#include <cctype>
-#include <cmath>
 #include <cstdlib>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
 #include <vector>
 

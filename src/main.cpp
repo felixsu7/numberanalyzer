@@ -1,11 +1,11 @@
 #include "analysis.hpp"
+#include "commands.hpp"
 #include "evaluator.hpp"
 #include "platform.hpp"
 #include "screen.hpp"
 #include "styling.hpp"
 #include "utils.hpp"
 #include <cerrno>
-#include <commands.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>

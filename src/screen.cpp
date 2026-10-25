@@ -1,5 +1,6 @@
 #include "screen.hpp"
 #include "platform.hpp"
+#include "styling.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -18,17 +19,16 @@
 
 // kung mabait ka compiler syempre iooptimize mo yan properly and not one by one
 // <3
-inline static const std::string HIDE_CURSOR = "\033[?25l";
-inline static const std::string SHOW_CURSOR = "\033[?25h";
-inline static const std::string RESTORE_SCREEN = "\033[?47l";
-inline static const std::string SAVE_SCREEN = "\033[?47h";
-inline static const std::string ENABLE_ALT_BUFFER = "\033[?1049h";
-inline static const std::string DISABLE_ALT_BUFFER = "\033[?1049l";
-inline static const std::string CLEAR_SCREEN = "\033[2J";
-inline static const std::string HOME_CURSOR = "\033[H";
-inline static const std::string RESET_STYLE = "\033[0m";
-inline static const std::string TERM_SYNC_BEGIN = "\033[?2026h";
-inline static const std::string TERM_SYNC_END = "\033[?2026l";
+static const std::string HIDE_CURSOR = "\033[?25l";
+static const std::string SHOW_CURSOR = "\033[?25h";
+static const std::string RESTORE_SCREEN = "\033[?47l";
+static const std::string SAVE_SCREEN = "\033[?47h";
+static const std::string ENABLE_ALT_BUFFER = "\033[?1049h";
+static const std::string DISABLE_ALT_BUFFER = "\033[?1049l";
+static const std::string CLEAR_SCREEN = "\033[2J";
+static const std::string HOME_CURSOR = "\033[H";
+static const std::string TERM_SYNC_BEGIN = "\033[?2026h";
+static const std::string TERM_SYNC_END = "\033[?2026l";
 
 static const int SCREEN_FPS = 30;
 
